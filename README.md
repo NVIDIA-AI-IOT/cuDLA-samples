@@ -104,3 +104,6 @@ The INT8 cuDLA inference in this sample uses _INT8 Input:kDLA_LINEAR,kDLA_HWC4 +
 | FP16 Output  | kDLA_LINEAR,kCHW16 |
 
 - NVIDIA reserves the right to change road map without implicit assumption of API and compatatability support
+
+# Reference Link
+https://github.com/NVIDIA/Deep-Learning-Accelerator-SW
