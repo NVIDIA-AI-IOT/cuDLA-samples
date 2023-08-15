@@ -15,7 +15,7 @@ This sample demonstrates QAT training&deploying YOLOv5s on Orin DLA, which inclu
 sudo apt update
 sudo apt install libopencv-dev libjsoncpp-dev python3-pip git git-lfs
 
-# COCO tool and dataset for mAP benchmark
+# If want to mAP benchmark with COCO dataset, download COCO tool and dataset 
 pip3 install pycocotools
 cd data/
 bash download_coco_validation_set.sh
@@ -31,8 +31,6 @@ bash download_coco_validation_set.sh
 Refer to [export/README.md](./export/README.md).
 
 # Build and Run
-
-Clone this repo by
 
 ```
 git clone --recursive https://github.com/NVIDIA-AI-IOT/cuDLA-samples.git
@@ -54,7 +52,6 @@ Build loadable and compile the sample
 bash data/model/build_dla_standalone_loadable.sh
 # Build matx used in pre-/post-processing
 bash src/matx_reformat/build_matx_reformat.sh
-# Build YOLOv5 cuDLA app
 make
 ```
 
