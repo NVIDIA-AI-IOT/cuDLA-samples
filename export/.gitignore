@@ -1,0 +1,13 @@
+**__pycache__**
+*.pyc
+*.idea/
+*.so
+*.yaml
+*.sh 
+*.pth
+*.pkl
+*.zip
+*.bin
+.vscode/
+*.onnx
+*.log
