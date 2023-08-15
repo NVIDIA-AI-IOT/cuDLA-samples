@@ -13,7 +13,7 @@ This sample demonstrates QAT training&deploying YOLOv5s on Orin DLA, which inclu
 
 ```
 sudo apt update
-sudo apt install libopencv-dev libjsoncpp-dev python3-pip git
+sudo apt install libopencv-dev libjsoncpp-dev python3-pip git git-lfs
 
 # COCO tool and dataset for mAP benchmark
 pip3 install pycocotools
@@ -32,10 +32,25 @@ Refer to [export/README.md](./export/README.md).
 
 # Build and Run
 
+Clone this repo by
+
 ```
 git clone --recursive https://github.com/NVIDIA-AI-IOT/cuDLA-samples.git
+```
+
+If your OS version is less than 6.0.8.0 or Jetpack 6.0, please apply trtexec-dla-standalone.patch to trtexec and re-built:
+
+```
+cp data/trtexec-dla-standalone.patch /usr/src/tensorrt/
+cd /usr/src/tensorrt/
+git apply trtexec-dla-standalone.patch
+cd samples/trtexec
+make
+```
+
+Build loadable and compile the sample
+```
 # Build INT8 and FP16 loadable from ONNX in this project
-# Need to install tensorrt-safe package to build the DLA standalone loadable
 bash data/model/build_dla_standalone_loadable.sh
 # Build matx used in pre-/post-processing
 bash src/matx_reformat/build_matx_reformat.sh

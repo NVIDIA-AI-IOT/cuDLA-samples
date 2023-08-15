@@ -1,0 +1,99 @@
+diff --git a/samples/common/sampleEngines.cpp b/samples/common/sampleEngines.cpp
+index 6880065..85485b1 100755
+--- a/samples/common/sampleEngines.cpp
++++ b/samples/common/sampleEngines.cpp
+@@ -968,9 +968,9 @@ bool setupNetworkAndConfig(BuildOptions const& build, SystemOptions const& sys,
+         setLayerOutputTypes(network, build.layerOutputTypes);
+     }
+ 
+-    if (build.safe)
++    if (build.safe && sys.DLACore == -1)
+     {
+-        config.setEngineCapability(sys.DLACore != -1 ? EngineCapability::kDLA_STANDALONE : EngineCapability::kSAFETY);
++	config.setEngineCapability(EngineCapability::kSAFETY);
+     }
+ 
+     if (build.restricted)
+@@ -986,6 +986,10 @@ bool setupNetworkAndConfig(BuildOptions const& build, SystemOptions const& sys,
+             config.setDLACore(sys.DLACore);
+             config.setFlag(BuilderFlag::kPREFER_PRECISION_CONSTRAINTS);
+ 
++	    if (build.buildDLAStandalone)
++            {
++                config.setEngineCapability(EngineCapability::kDLA_STANDALONE);
++            }
+             if (sys.fallback)
+             {
+                 config.setFlag(BuilderFlag::kGPU_FALLBACK);
+diff --git a/samples/common/sampleOptions.cpp b/samples/common/sampleOptions.cpp
+index 7fd1ee7..c5e1ae7 100755
+--- a/samples/common/sampleOptions.cpp
++++ b/samples/common/sampleOptions.cpp
+@@ -844,6 +844,7 @@ void BuildOptions::parse(Arguments& arguments)
+     getAndDelOption(arguments, "--fp16", fp16);
+     getAndDelOption(arguments, "--int8", int8);
+     getAndDelOption(arguments, "--safe", safe);
++    getAndDelOption(arguments, "--buildDLAStandalone", buildDLAStandalone);
+     getAndDelOption(arguments, "--consistency", consistency);
+     getAndDelOption(arguments, "--restricted", restricted);
+     getAndDelOption(arguments, "--buildOnly", buildOnly);
+@@ -1229,22 +1230,31 @@ void AllOptions::parse(Arguments& arguments)
+         }
+         if (build.safe && system.DLACore >= 0)
+         {
+-            auto checkSafeDLAFormats = [](std::vector<IOFormat> const& fmt) {
+-                return fmt.empty() ? false : std::all_of(fmt.begin(), fmt.end(), [](IOFormat const& pair) {
++	    build.buildDLAStandalone = true;
++        }
++        if (build.buildDLAStandalone)
++        {
++	    build.buildOnly = true;
++	    auto checkSafeDLAFormats = [](std::vector<IOFormat> const& fmt, bool isInput) {
++		return fmt.empty() ? false : std::all_of(fmt.begin(), fmt.end(), [&](IOFormat const& pair) {
+                     bool supported{false};
+-                    bool const isLINEAR{pair.second == 1U << static_cast<int32_t>(nvinfer1::TensorFormat::kLINEAR)};
+-                    bool const isCHW4{pair.second == 1U << static_cast<int32_t>(nvinfer1::TensorFormat::kCHW4)};
++		    bool const isDLA_LINEAR{
++                        pair.second == 1U << static_cast<int32_t>(nvinfer1::TensorFormat::kDLA_LINEAR)};
++                    bool const isHWC4{pair.second == 1U << static_cast<int32_t>(nvinfer1::TensorFormat::kCHW4)
++                        || pair.second == 1U << static_cast<int32_t>(nvinfer1::TensorFormat::kDLA_HWC4)};
+                     bool const isCHW32{pair.second == 1U << static_cast<int32_t>(nvinfer1::TensorFormat::kCHW32)};
+                     bool const isCHW16{pair.second == 1U << static_cast<int32_t>(nvinfer1::TensorFormat::kCHW16)};
+-                    supported |= pair.first == nvinfer1::DataType::kINT8 && (isLINEAR || isCHW4 || isCHW32);
+-                    supported |= pair.first == nvinfer1::DataType::kHALF && (isLINEAR || isCHW4 || isCHW16);
++		    supported |= pair.first == nvinfer1::DataType::kINT8
++                        && (isDLA_LINEAR || (isInput ? isHWC4 : false) || isCHW32);
++                    supported |= pair.first == nvinfer1::DataType::kHALF
++                        && (isDLA_LINEAR || (isInput ? isHWC4 : false) || isCHW16);
+                     return supported;
+                 });
+             };
+-            if (!checkSafeDLAFormats(build.inputFormats) || !checkSafeDLAFormats(build.outputFormats))
++            if (!checkSafeDLAFormats(build.inputFormats, true) || !checkSafeDLAFormats(build.outputFormats, false))
+             {
+                 throw std::invalid_argument(
+-                    "I/O formats for safe DLA capability are restricted to fp16/int8:linear, fp16:chw16 or int8:chw32");
++		    "I/O formats for safe DLA capability are restricted to fp16/int8:dla_linear, fp16/int8:hwc4, fp16:chw16 or int8:chw32");
+             }
+             if (system.fallback)
+             {
+@@ -1821,6 +1831,7 @@ void BuildOptions::help(std::ostream& os)
+           "                                                    type ::= \"fp32\"|\"fp16\"|\"int32\"|\"int8\"[\"+\"type]"                     "\n"
+           "  --calib=<file>              Read INT8 calibration cache file"                                                                   "\n"
+           "  --safe                      Enable build safety certified engine"                                                               "\n"
++	  "  --buildDLAStandalone        Enable build DLA standalone loadable which can be loaded by cuDLA, when this option is enabled, "   "\n"
+           "  --consistency               Perform consistency checking on safety certified engine"                                            "\n"
+           "  --restricted                Enable safety scope checking with kSAFETY_SCOPE build flag"                                         "\n"
+           "  --saveEngine=<file>         Save the serialized engine"                                                                         "\n"
+diff --git a/samples/common/sampleOptions.h b/samples/common/sampleOptions.h
+index 88eca96..8ffedd9 100755
+--- a/samples/common/sampleOptions.h
++++ b/samples/common/sampleOptions.h
+@@ -147,6 +147,7 @@ struct BuildOptions : public Options
+     LayerPrecisions layerPrecisions;
+     LayerOutputTypes layerOutputTypes;
+     bool safe{false};
++    bool buildDLAStandalone{false};
+     bool consistency{false};
+     bool restricted{false};
+     bool buildOnly{false};
