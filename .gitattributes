@@ -1,0 +1,2 @@
+data/model/yolov5s_trimmed_reshape_tranpose.onnx filter=lfs diff=lfs merge=lfs -text
+data/model/yolov5_trimmed_qat.onnx filter=lfs diff=lfs merge=lfs -text
