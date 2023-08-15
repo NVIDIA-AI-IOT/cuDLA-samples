@@ -28,7 +28,7 @@ bash download_coco_validation_set.sh
 
 # YOLOv5 QAT Training and ONNX Export
 
-Refer to [export/README.md](https://github.com/NVIDIA-AI-IOT/cuDLA-samples/blob/main/export/README.md).
+Refer to [export/README.md](./export/README.md).
 
 # Build and Run
 
