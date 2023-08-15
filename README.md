@@ -64,7 +64,7 @@ Note:
 
 | Platform | GPU clock | Memory clock | DLA clock | TensorRT Version | DLA Version |
 | --- | --- | --- | --- | --- | --- |
-| Orin-X | 1275Mhz | 3200MHz | 1331MHz | 8.6 | 3.14 |
+| Orin-X | 1275 MHz | 3200 MHz | 1331 MHz | 8.6 | 3.14 |
 
 | Batch Size | DLA INT8(int8:hwc4 in + fp16:chw16 out) (ms) | GPU INT8(int8:chw32 in + fp16:chw16 out) (ms) |
 | ---------- | --------------------------------------- | ---------------------------------------- |
