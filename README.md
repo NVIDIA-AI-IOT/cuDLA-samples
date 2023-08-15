@@ -13,7 +13,7 @@ This sample demonstrates QAT training&deploying YOLOv5s on Orin DLA, which inclu
 
 ```
 sudo apt update
-sudo apt install libopencv-dev libjsoncpp-dev python3-pip git
+sudo apt install libopencv-dev libjsoncpp-dev python3-pip
 
 # COCO tool and dataset for mAP benchmark
 pip3 install pycocotools
