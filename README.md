@@ -32,9 +32,8 @@ Refer to export/README.md.
 
 # Build and Run
 
-Clone this repo with `git clone --recursive`
-
 ```
+git clone --recursive https://github.com/NVIDIA-AI-IOT/cuDLA-samples.git
 # Build INT8 and FP16 loadable from ONNX in this project
 # Need to install tensorrt-safe package to build the DLA standalone loadable
 bash data/model/build_dla_standalone_loadable.sh
@@ -59,7 +58,7 @@ make validate_cudla_int8 # or make validate_cudla_fp16
 
 Note: 
 1. We use inference resolution of 1x3x672x672 to get this mAP.
-2. Fallback the last 4 layers to FP16 in the last head can increase mAP from 37.1 to 37.3, but the perf will drop little from 4.0ms to 4.46ms. This can be tested with a new loadble built by `$ bash data/model/build_dla_standalone_loadable_v2.sh `
+2. Fallback the last 4 layers to FP16 in the last head can increase mAP from 37.1 to 37.3, but the perf will drop little from 4.0ms to 4.46ms. This can be tested with a new loadble built by `bash data/model/build_dla_standalone_loadable_v2.sh `
 # Performance
 
 | Platform | GPU clock | Memory clock | DLA clock | TensorRT Version | DLA Version |
@@ -91,3 +90,5 @@ The INT8 cuDLA inference in this sample uses _INT8 Input:kDLA_LINEAR,kDLA_HWC4 +
 | FP16 Input   | kDLA_LINEAR,kCHW16 |
 | INT8 Output  | kDLA_LINEAR,kCHW32 |
 | FP16 Output  | kDLA_LINEAR,kCHW16 |
+
+- NVIDIA reserves the right to change road map without implicit assumption of API and compatatability support
