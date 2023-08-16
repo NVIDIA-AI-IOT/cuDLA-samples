@@ -64,7 +64,7 @@ make validate_cudla_int8 # or make validate_cudla_fp16
 
 # mAP over COCO 2017
 
-|YOLOv5s |Offical Data|DLA FP16|DLA INT8 QAT|GPU INT8 QAT|
+|YOLOv5s |Official Data|DLA FP16|DLA INT8 QAT|GPU INT8 QAT|
 |:----|:----|:----|:----|:----|
 |mAP|[37.4](https://github.com/ultralytics/yolov5#pretrained-checkpoints)|37.5|37.1|36.8|
 
