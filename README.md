@@ -15,7 +15,7 @@ This sample demonstrates QAT training&deploying YOLOv5s on Orin DLA, which inclu
 sudo apt update
 sudo apt install libopencv-dev libjsoncpp-dev python3-pip git git-lfs
 
-# COCO tool and dataset for mAP benchmark
+# If want to mAP benchmark with COCO dataset, download COCO tool and dataset 
 pip3 install pycocotools
 cd data/
 bash download_coco_validation_set.sh
@@ -32,20 +32,18 @@ Refer to [export/README.md](./export/README.md).
 
 # Build and Run
 
-Clone this repo by
-
 ```
 git clone --recursive https://github.com/NVIDIA-AI-IOT/cuDLA-samples.git
 ```
 
-If your OS version is less than 6.0.8.0 or Jetpack 6.0, please apply trtexec-dla-standalone.patch to trtexec and re-built:
+If your OS version is less than Drive OS 6.0.8.0 or Jetpack 6.0, please apply trtexec-dla-standalone.patch to trtexec and re-built.
 
 ```
 cp data/trtexec-dla-standalone.patch /usr/src/tensorrt/
 cd /usr/src/tensorrt/
 git apply trtexec-dla-standalone.patch
 cd samples/trtexec
-make
+sudo make
 ```
 
 Build loadable and compile the sample
@@ -54,7 +52,6 @@ Build loadable and compile the sample
 bash data/model/build_dla_standalone_loadable.sh
 # Build matx used in pre-/post-processing
 bash src/matx_reformat/build_matx_reformat.sh
-# Build YOLOv5 cuDLA app
 make
 ```
 
@@ -107,3 +104,6 @@ The INT8 cuDLA inference in this sample uses _INT8 Input:kDLA_LINEAR,kDLA_HWC4 +
 | FP16 Output  | kDLA_LINEAR,kCHW16 |
 
 - NVIDIA reserves the right to change road map without implicit assumption of API and compatatability support
+
+# Reference Link
+https://github.com/NVIDIA/Deep-Learning-Accelerator-SW
