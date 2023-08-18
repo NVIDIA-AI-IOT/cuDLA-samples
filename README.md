@@ -36,12 +36,12 @@ Refer to [export/README.md](./export/README.md).
 git clone --recursive https://github.com/NVIDIA-AI-IOT/cuDLA-samples.git
 ```
 
-If your OS version is less than Drive OS 6.0.8.0 or Jetpack 6.0, please apply trtexec-dla-standalone.patch to trtexec and re-built.
+If your OS version is less than Drive OS 6.0.8.0 or Jetpack 6.0, please apply trtexec-dla-standalone-trtv8.5.patch(for trt 8.5, for other version you may need to apply it manually) to trtexec and re-built.
 
 ```
-cp data/trtexec-dla-standalone.patch /usr/src/tensorrt/
+cp data/trtexec-dla-standalone-trtv8.5.patch /usr/src/tensorrt/
 cd /usr/src/tensorrt/
-git apply trtexec-dla-standalone.patch
+git apply trtexec-dla-standalone-trtv8.5.patch
 cd samples/trtexec
 sudo make
 ```
