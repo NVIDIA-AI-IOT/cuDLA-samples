@@ -46,20 +46,32 @@ cd samples/trtexec
 sudo make
 ```
 
-Build loadable and compile the sample
+Build loadable and compile matx reformat lib
 ```
 # Build INT8 and FP16 loadable from ONNX in this project
 bash data/model/build_dla_standalone_loadable.sh
 # Build matx used in pre-/post-processing
 bash src/matx_reformat/build_matx_reformat.sh
-make
 ```
 
+Run the sample with DLA hybrid mode
 ```
+make clean
 # Run INT8 inference on single image
 make run
 # Or run COCO validation
 make validate_cudla_int8 # or make validate_cudla_fp16
+```
+
+Run the sample with DLA standalone mode
+```
+# "make clean" is needed when switch between hybrid mode and standalone mode
+make clean
+# Run INT8 inference on single image
+make run USE_DLA_STANDALONE_MODE=1
+# Or run COCO validation
+make validate_cudla_int8 USE_DLA_STANDALONE_MODE=1
+# or make validate_cudla_fp16 USE_DLA_STANDALONE_MODE=1
 ```
 
 # mAP over COCO 2017
@@ -71,6 +83,7 @@ make validate_cudla_int8 # or make validate_cudla_fp16
 Note: 
 1. We use inference resolution of 1x3x672x672 to get this mAP.
 2. Fallback the last 4 layers to FP16 in the last head can increase mAP from 37.1 to 37.3, but the perf will drop little from 4.0ms to 4.46ms. This can be tested with a new loadble built by `bash data/model/build_dla_standalone_loadable_v2.sh `
+
 # Performance
 
 | Platform | GPU clock | Memory clock | DLA clock | TensorRT Version | DLA Version |
@@ -89,9 +102,21 @@ Note:
 - If we use `int8:hwc4 in + int8:chw32 out` then we can get perf of about 2.4ms(bs=1) for DLA INT8, but it will lead to small accuracy drop. We will optimize this in the future.
 - The inference time(median GPU computing time) here is taken with trtexec which use some pre-launch technique to maximize the through put, so it's slightly better than the inference time measure in the pipeline.
 
+# DLA Hybrid Mode and DLA Standalone Mode
+
+This sample demonstrate how to use DLA hybrid mode and DLA standalone mode for a CUDA->cuDLA->CUDA pipeline. More details on DLA hybrid mode and DLA standalone mode can be found at https://docs.nvidia.com/cuda/cuda-for-tegra-appnote/index.html#memory-model.
+
+Use DLA hybrid mode give quick integration with other CUDA tasks, all we need to do is register CUDA memory to cuDLA.
+
+![dla_hybrid_mode](./data/images/dla_hybrid_mode.png)
+
+Use DLA standalone mode can prevent the CUDA context creation, and thus improve the parallelism with other GPU task. cuDLA's standalone mode make use of NvSci to finish the data transfer and synchronization with other modules like camera, GPU or CPU.
+
+![dla_standalone_mode](./data/images/dla_standalone_mode.png)
+
+Our DLA hybrid mode context code and standalone mode context code has no other dependencies from the sample, thus it can be integrated to user's application quickly. Just copy the src/cuda_context_hybird.* or src/cuda_context_standalone.* to your own project, add necessary include path and link libraries(Check ./Makefile). then you can make use of our code directly.
 # Notes
 
-- This sample uses cuDLA in [hybrid mode](https://docs.nvidia.com/cuda/cuda-for-tegra-appnote/index.html#memory-model) wherein DLA can be programmed using CUDA. More cuDLA usage and material can be found [here](https://github.com/NVIDIA/Deep-Learning-Accelerator-SW/tree/main/samples/cuDLA).
 - The scale used for FP32 to INT8 conversion in pre-processing is hardcoded, which value is from the first layer of the calibration cache, check [mInputScale](./src/yolov5.h) and [images: 3c00f9f4](./data/model/qat2ptq.cache). For more information about QAT, check [pytorch-quantization](https://github.com/NVIDIA/TensorRT/tree/main/tools/pytorch-quantization). For more information about quantization inside TensorRT, check [TensorRT Developer Guide](https://docs.nvidia.com/deeplearning/tensorrt/developer-guide/index.html#working-with-int8)
 - Need to use below Input and Output format for cuDLA INT8 and FP16. More info about DLA I/O format can be found in **[I/O Formats on DLA](https://docs.nvidia.com/deeplearning/tensorrt/developer-guide/index.html#restrictions-with-dla)**. 
 The INT8 cuDLA inference in this sample uses _INT8 Input:kDLA_LINEAR,kDLA_HWC4 + FP16 Output:kDLA_LINEAR,kCHW16_. 
@@ -103,7 +128,7 @@ The INT8 cuDLA inference in this sample uses _INT8 Input:kDLA_LINEAR,kDLA_HWC4 +
 | INT8 Output  | kDLA_LINEAR,kCHW32 |
 | FP16 Output  | kDLA_LINEAR,kCHW16 |
 
-- NVIDIA reserves the right to change road map without implicit assumption of API and compatatability support
+- NVIDIA reserves the right to change road map without implicit assumption of API and compatibility support.
 
 # Reference Link
 https://github.com/NVIDIA/Deep-Learning-Accelerator-SW  

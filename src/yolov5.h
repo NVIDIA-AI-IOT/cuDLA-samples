@@ -35,7 +35,11 @@
 #include <string>
 #include <vector>
 
-#include "cudla_context.h"
+#ifdef USE_DLA_STANDALONE_MODE
+#include "cudla_context_standalone.h"
+#else
+#include "cudla_context_hybrid.h"
+#endif
 #include "decode_nms.h"
 #include "matx_reformat.h"
 
@@ -97,6 +101,11 @@ class yolov5
     yolov5(std::string engine_path, Yolov5Backend backend);
 
     //!
+    //! \brief release yolov5 class object
+    //!
+    ~yolov5();
+
+    //!
     //! \brief run tensorRT inference with the data preProcessed
     //!
     int infer();
@@ -141,14 +150,17 @@ class yolov5
 
     std::string   mEnginePath;
     Yolov5Backend mBackend;
-
+#ifdef USE_DLA_STANDALONE_MODE
+    cuDLAContextStandalone *mCuDLACtx;
+#else
     cuDLAContext *mCuDLACtx;
+#endif
 
     float               mInputScale   = 0.00787209;
     float               mOutputScale1 = 0.0546086;
     float               mOutputScale2 = 0.148725;
     float               mOutputScale3 = 0.0546086;
-    std::vector<void *> mOutputsTemp;
+    void* mInputTemp;
 
     // chw16 -> chw -> reshape -> transpose operation for yolov5 heads.
     // also support chw -> chw16 for yolov5 inputs

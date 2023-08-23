@@ -15,10 +15,12 @@ The pipeline in this sample is as below:
 
 ```
 .
-├── cudla_context.cpp            # cuDLA inference Context [Inference (cuDLA)]
-├── cudla_context.h              # cuDLA inference Context
+├── cudla_context_hybrid.cpp            # cuDLA inference context in hybrid mode [cuDLA inference]
+├── cudla_context_hybrid.h              # cuDLA inference context in hybrid mode [cuDLA inference]
+├── cudla_context_standalone.cpp # cuDLA inference context in standalone mode [cuDLA inference]
+├── cudla_context_standalone.h   # cuDLA inference context in standalone mode [cuDLA inference]
 ├── decode_nms.cu                # Decode bbox and NMS [post-processing]
-├── decode_nms.h                 # Decode bbox and NMS
+├── decode_nms.h                 # Decode bbox and NMS [post-processing]
 ├── matx_reformat                # data reformat for cuDLA inputs/outputs [pre-processing] and [post-processing]
 │   ├── build_matx_reformat.sh
 │   ├── CMakeLists.txt
@@ -28,6 +30,6 @@ The pipeline in this sample is as below:
 │   ├── README.md
 │   └── test.cpp
 ├── validate_coco.cpp            # Validation app, main function [jpg --> OpenCV decode]
-├── yolov5.cpp                   # Yolov5 pipeline [pre-processing --> Inference (cuDLA) --> post-processing]
-└── yolov5.h                     # Yolov5 pipeline
+├── yolov5.cpp                   # Yolov5 pipeline [pre-processing --> Inference(cuDLA) --> post-processing]
+└── yolov5.h                     # Yolov5 pipeline [pre-processing --> Inference(cuDLA) --> post-processing]
 ```

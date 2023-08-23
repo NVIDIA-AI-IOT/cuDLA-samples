@@ -28,10 +28,15 @@ NVCC := $(CUDA_PATH)/bin/nvcc
 
 ALL_CCFLAGS += --std=c++14 -Wno-deprecated-declarations -Wall
 
+ifeq ($(USE_DLA_STANDALONE_MODE),1)
+    ALL_CCFLAGS += -DUSE_DLA_STANDALONE_MODE
+endif
+
+
 ifeq ($(DEBUG),1)
     ALL_CCFLAGS += -g
 else
-    ALL_CCFLAGS += -O3
+    ALL_CCFLAGS += -O2
 endif
 
 NVCC_FLAGS := -gencode arch=compute_87,code=sm_87
@@ -42,13 +47,15 @@ OPENCV_LIB_PATH ?= /usr/lib/aarch64-linux-gnu/
 INCLUDES += -I $(CUDA_PATH)/include \
             -I ./src/matx_reformat/ \
             -I $(OPENCV_INCLUDE_PATH) \
-            -I /usr/include/jsoncpp/
+            -I /usr/include/jsoncpp/ \
+			-I /usr/include
 LIBRARIES += -l cudla -L$(CUDA_PATH)/lib64 \
-             -l cudart -l nvinfer \
+             -l cuda -l cudart -l nvinfer \
              -L $(OPENCV_LIB_PATH) \
 	         -l opencv_objdetect -l opencv_highgui -l opencv_imgproc -l opencv_core -l opencv_imgcodecs \
              -L ./src/matx_reformat/build/ -l matx_reformat\
-             -l jsoncpp
+             -l jsoncpp \
+			 -lnvscibuf -lnvscisync
 
 CXXSRCS := $(wildcard $(SRCDIR)/*.cpp)
 CXXOBJS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(notdir $(CXXSRCS)))

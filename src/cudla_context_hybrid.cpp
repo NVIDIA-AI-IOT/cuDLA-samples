@@ -21,7 +21,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
  
-#include "cudla_context.h"
+#include "cudla_context_hybrid.h"
 
 cuDLAContext::cuDLAContext(const char *loadableFilePath)
 {

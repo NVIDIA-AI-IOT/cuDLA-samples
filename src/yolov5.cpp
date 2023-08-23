@@ -47,7 +47,7 @@ yolov5::yolov5(std::string engine_path, Yolov5Backend backend)
 
     mImgPushed = 0;
     // Malloc cuda memory for binding
-    void *input_buf;
+    void *input_buf = nullptr;
     void *output_buf_0;
     void *output_buf_1;
     void *output_buf_2;
@@ -56,7 +56,11 @@ yolov5::yolov5(std::string engine_path, Yolov5Backend backend)
     {
         // Create a cuda context first, otherwise cudla context creation would fail.
         cudaFree(0);
+#ifdef USE_DLA_STANDALONE_MODE
+        mCuDLACtx = new cuDLAContextStandalone(engine_path.c_str());
+#else
         mCuDLACtx = new cuDLAContext(engine_path.c_str());
+#endif
 
         void *input_buf_before_reformat;
         if (mBackend == Yolov5Backend::CUDLA_FP16)
@@ -64,17 +68,24 @@ yolov5::yolov5(std::string engine_path, Yolov5Backend backend)
             // Same size as cuDLA input
             checkCudaErrors(cudaMalloc(&input_buf_before_reformat, mCuDLACtx->getInputTensorSizeWithIndex(0)));
             mInputCHWPad16.push_back(input_buf_before_reformat);
-            checkCudaErrors(cudaMalloc(&input_buf, mCuDLACtx->getInputTensorSizeWithIndex(0)));
+            checkCudaErrors(cudaMalloc(&mInputTemp, 2 * mCuDLACtx->getInputTensorSizeWithIndex(0)));
         }
         if (mBackend == Yolov5Backend::CUDLA_INT8)
         {
             // For int8, we need to do reformat on FP32, then cast to INT8, so we need 4x space.
             checkCudaErrors(
-                cudaMalloc(&input_buf_before_reformat, sizeof(float) * mCuDLACtx->getInputTensorSizeWithIndex(0)));
+                cudaMalloc(&input_buf_before_reformat, 4 * mCuDLACtx->getInputTensorSizeWithIndex(0)));
             mInputCHWPad16.push_back(input_buf_before_reformat);
-            checkCudaErrors(cudaMalloc(&input_buf, sizeof(float) * mCuDLACtx->getInputTensorSizeWithIndex(0)));
+            checkCudaErrors(cudaMalloc(&mInputTemp, 4 * mCuDLACtx->getInputTensorSizeWithIndex(0)));
         }
+#ifdef USE_DLA_STANDALONE_MODE
+        input_buf = mCuDLACtx->getInputCudaBufferPtr(0);
+        output_buf_0 = mCuDLACtx->getOutputCudaBufferPtr(0);
+        output_buf_1 = mCuDLACtx->getOutputCudaBufferPtr(1);
+        output_buf_2 = mCuDLACtx->getOutputCudaBufferPtr(2);
+#else
         // Use fp16:chw16 output due to no int8 scale for the output tensor
+        checkCudaErrors(cudaMalloc(&input_buf, mCuDLACtx->getInputTensorSizeWithIndex(0)));
         checkCudaErrors(cudaMalloc(&output_buf_0, mCuDLACtx->getOutputTensorSizeWithIndex(0)));
         checkCudaErrors(cudaMalloc(&output_buf_1, mCuDLACtx->getOutputTensorSizeWithIndex(1)));
         checkCudaErrors(cudaMalloc(&output_buf_2, mCuDLACtx->getOutputTensorSizeWithIndex(2)));
@@ -82,6 +93,7 @@ yolov5::yolov5(std::string engine_path, Yolov5Backend backend)
         std::vector<void *> cudla_inputs{input_buf};
         std::vector<void *> cudla_outputs{output_buf_0, output_buf_1, output_buf_2};
         mCuDLACtx->bufferPrep(cudla_inputs.data(), cudla_outputs.data(), mStream);
+#endif
     }
     mBindingArray.push_back(reinterpret_cast<void *>(input_buf));
     mBindingArray.push_back(output_buf_0);
@@ -156,6 +168,12 @@ yolov5::yolov5(std::string engine_path, Yolov5Backend backend)
     return;
 }
 
+yolov5::~yolov5()
+{
+    delete mCuDLACtx;
+    mCuDLACtx = nullptr;
+}
+
 static void hwc_to_chw(cv::InputArray src, cv::OutputArray dst)
 {
     std::vector<cv::Mat> channels;
@@ -212,15 +230,16 @@ int yolov5::pushImg(void *imgBuffer, int numImg, bool fromCPU)
     if (mBackend == Yolov5Backend::CUDLA_FP16)
     {
         checkCudaErrors(
-            cudaMemcpy(mBindingArray[0], imgBuffer, 1 * 3 * 672 * 672 * sizeof(float), cudaMemcpyHostToDevice));
-        convert_float_to_half((float *)mBindingArray[0], (__half *)mInputCHWPad16[0], 1 * 3 * 672 * 672);
+            cudaMemcpy(mInputTemp, imgBuffer, 1 * 3 * 672 * 672 * sizeof(float), cudaMemcpyHostToDevice));
+        convert_float_to_half((float *)mInputTemp, (__half *)mInputCHWPad16[0], 1 * 3 * 672 * 672);
         mReformatRunner->ReformatImage(mInputCHWPad16.data(), mBindingArray.data(), mStream);
     }
     if (mBackend == Yolov5Backend::CUDLA_INT8)
     {
         checkCudaErrors(
-            cudaMemcpy(mBindingArray[0], imgBuffer, 1 * 3 * 672 * 672 * sizeof(float), cudaMemcpyHostToDevice));
-        mReformatRunner->ReformatImageV2(mBindingArray.data(), mInputCHWPad16.data(), mStream);
+            cudaMemcpy(mInputTemp, imgBuffer, 1 * 3 * 672 * 672 * sizeof(float), cudaMemcpyHostToDevice));
+        std::vector<void*> vec_temp{mInputTemp};
+        mReformatRunner->ReformatImageV2(vec_temp.data(), mInputCHWPad16.data(), mStream);
         checkCudaErrors(cudaStreamSynchronize(mStream));
         // dla_hwc4 format, so 1*4*672*672
         convert_float_to_int8((float *)mInputCHWPad16[0], (int8_t *)mBindingArray[0], 1 * 4 * 672 * 672, mInputScale);
@@ -236,18 +255,21 @@ int yolov5::infer()
         std::cerr << " error: mImgPushed = " << mImgPushed << "  ,mImgPushed == 0!" << std::endl;
         return -1;
     }
-
+#ifndef USE_DLA_STANDALONE_MODE
     checkCudaErrors(cudaEventRecord(mStartEvent, mStream));
+#endif
 
     if (mBackend == Yolov5Backend::CUDLA_FP16 || mBackend == Yolov5Backend::CUDLA_INT8)
     {
         mCuDLACtx->submitDLATask(mStream);
     }
 
+#ifndef USE_DLA_STANDALONE_MODE
     checkCudaErrors(cudaEventRecord(mEndEvent, mStream));
     checkCudaErrors(cudaEventSynchronize(mEndEvent));
     checkCudaErrors(cudaEventElapsedTime(&ms, mStartEvent, mEndEvent));
     std::cout << "Inference time: " << ms << " ms" << std::endl;
+#endif
 
     if (mBackend == Yolov5Backend::CUDLA_FP16)
     {
