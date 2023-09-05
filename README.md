@@ -104,9 +104,9 @@ Note:
 
 # DLA Hybrid Mode and DLA Standalone Mode
 
-This sample demonstrate how to use DLA hybrid mode and DLA standalone mode for a CUDA->cuDLA->CUDA pipeline. More details on DLA hybrid mode and DLA standalone mode can be found at https://docs.nvidia.com/cuda/cuda-for-tegra-appnote/index.html#memory-model.
+This sample demonstrates how to use DLA hybrid mode and DLA standalone mode for a CUDA->cuDLA->CUDA pipeline. More details on DLA hybrid mode and DLA standalone mode can be found at https://docs.nvidia.com/cuda/cuda-for-tegra-appnote/index.html#memory-model.
 
-Use DLA hybrid mode give quick integration with other CUDA tasks, all we need to do is register CUDA memory to cuDLA.
+Using DLA hybrid mode allows quick integration with other CUDA tasks, all we need to do is register CUDA memory to cuDLA.
 
 ![dla_hybrid_mode](./data/images/dla_hybrid_mode.png)
 

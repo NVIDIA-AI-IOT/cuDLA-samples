@@ -61,14 +61,13 @@ yolov5::yolov5(std::string engine_path, Yolov5Backend backend)
 #else
         mCuDLACtx = new cuDLAContext(engine_path.c_str());
 #endif
-
+        checkCudaErrors(cudaMalloc(&mInputTemp, 1 * 3 * 672 * 672 * sizeof(float)));
         void *input_buf_before_reformat;
         if (mBackend == Yolov5Backend::CUDLA_FP16)
         {
             // Same size as cuDLA input
             checkCudaErrors(cudaMalloc(&input_buf_before_reformat, mCuDLACtx->getInputTensorSizeWithIndex(0)));
             mInputCHWPad16.push_back(input_buf_before_reformat);
-            checkCudaErrors(cudaMalloc(&mInputTemp, 2 * mCuDLACtx->getInputTensorSizeWithIndex(0)));
         }
         if (mBackend == Yolov5Backend::CUDLA_INT8)
         {
@@ -76,7 +75,6 @@ yolov5::yolov5(std::string engine_path, Yolov5Backend backend)
             checkCudaErrors(
                 cudaMalloc(&input_buf_before_reformat, 4 * mCuDLACtx->getInputTensorSizeWithIndex(0)));
             mInputCHWPad16.push_back(input_buf_before_reformat);
-            checkCudaErrors(cudaMalloc(&mInputTemp, 4 * mCuDLACtx->getInputTensorSizeWithIndex(0)));
         }
 #ifdef USE_DLA_STANDALONE_MODE
         input_buf = mCuDLACtx->getInputCudaBufferPtr(0);
