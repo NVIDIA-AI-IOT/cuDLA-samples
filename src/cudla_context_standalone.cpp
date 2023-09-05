@@ -125,12 +125,12 @@ cuDLAContextStandalone::cuDLAContextStandalone(const char *loadableFilePath)
 // Read loadable in to memory
 bool cuDLAContextStandalone::readDLALoadable(const char *loadableFilePath)
 {
-    FILE *      fp = NULL;
+    FILE *      fp = nullptr;
     struct stat st;
     size_t      actually_read = 0;
 
     fp = fopen(loadableFilePath, "rb");
-    if (fp == NULL)
+    if (fp == nullptr)
     {
         DPRINTF("Cannot open file %s", loadableFilePath);
         return false;
@@ -145,7 +145,7 @@ bool cuDLAContextStandalone::readDLALoadable(const char *loadableFilePath)
     m_File_size = st.st_size;
 
     m_LoadableData = (unsigned char *)malloc(m_File_size);
-    if (m_LoadableData == NULL)
+    if (m_LoadableData == nullptr)
     {
         DPRINTF("Cannot Allocate memory for loadable");
         return false;
@@ -411,7 +411,7 @@ int cuDLAContextStandalone::submitDLATask(cudaStream_t streamToRun)
 {
     m_cuda_err = cudaSignalExternalSemaphoresAsync(&m_SignalSem, &m_SignalParams, 1, streamToRun);
     CHECK_CUDA_ERR(m_cuda_err, "signal external semaphores on previous stream");
-    m_cudla_err = cudlaSubmitTask(m_DevHandle, &m_Task, 1, NULL, 0);
+    m_cudla_err = cudlaSubmitTask(m_DevHandle, &m_Task, 1, nullptr, 0);
     CHECK_CUDLA_ERR(m_cudla_err, "submit cudla task");
     m_cuda_err = cudaWaitExternalSemaphoresAsync(&m_WaitSem, &m_WaitParams, 1, streamToRun);
     CHECK_CUDA_ERR(m_cuda_err, "wait external semaphores on previous stream");

@@ -20,49 +20,61 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
- 
+
+#define DPRINTF(...)                                                                                                   \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        printf("[hybrid mode] ");                                                                                      \
+        printf(__VA_ARGS__);                                                                                           \
+    } while (0)
+
+#define CHECK_CUDLA_ERR(m_cudla_err, msg)                                                                              \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        if (m_cudla_err != cudlaSuccess)                                                                               \
+        {                                                                                                              \
+            DPRINTF("%s FAILED in %s:%d, CUDLA ERR: %d\n", msg, __FILE__, __LINE__, m_cudla_err);                      \
+            exit(1);                                                                                                   \
+        }                                                                                                              \
+        else                                                                                                           \
+        {                                                                                                              \
+            DPRINTF("%s SUCCESS\n", msg);                                                                              \
+        }                                                                                                              \
+    } while (0)
+
 #include "cudla_context_hybrid.h"
 
-cuDLAContext::cuDLAContext(const char *loadableFilePath)
+cuDLAContextHybrid::cuDLAContextHybrid(const char *loadableFilePath)
 {
     readDLALoadable(loadableFilePath);
-    m_Initialized = false;
-    if (!m_Initialized)
-    {
-        initialize();
-    }
-    else
-    {
-        std::cerr << "The cuDLAContext was initialized." << std::endl;
-    }
+    initialize();
 }
 
-bool cuDLAContext::readDLALoadable(const char *loadableFilePath)
+bool cuDLAContextHybrid::readDLALoadable(const char *loadableFilePath)
 {
-    FILE *      fp = NULL;
+    FILE *      fp = nullptr;
     struct stat st;
     size_t      actually_read = 0;
 
-    // Read loadable into buffer.
     fp = fopen(loadableFilePath, "rb");
-    if (fp == NULL)
+    if (fp == nullptr)
     {
-        std::cerr << "Cannot open file " << loadableFilePath << std::endl;
+        DPRINTF("Cannot open file %s", loadableFilePath);
         return false;
     }
 
     if (stat(loadableFilePath, &st) != 0)
     {
-        std::cerr << "Cannot stat file" << std::endl;
+        DPRINTF("Cannot open file %s", loadableFilePath);
         return false;
     }
 
     m_File_size = st.st_size;
 
     m_LoadableData = (unsigned char *)malloc(m_File_size);
-    if (m_LoadableData == NULL)
+    if (m_LoadableData == nullptr)
     {
-        std::cerr << "Cannot Allocate memory for loadable" << std::endl;
+        m_LoadableData = (unsigned char *)malloc(m_File_size);
         return false;
     }
 
@@ -70,264 +82,117 @@ bool cuDLAContext::readDLALoadable(const char *loadableFilePath)
     if (actually_read != m_File_size)
     {
         free(m_LoadableData);
-        std::cerr << "Read wrong size" << std::endl;
+        DPRINTF("Read wrong size");
         return false;
     }
     fclose(fp);
     return true;
 }
 
-bool cuDLAContext::initialize()
+bool cuDLAContextHybrid::initialize()
 {
-    cudlaStatus err;
-    err = cudlaCreateDevice(0, &m_DevHandle, CUDLA_CUDA_DLA);
-    if (err != cudlaSuccess)
-    {
-        std::cerr << "Error in cuDLA create device = " << err << std::endl;
-        cleanUp();
-        return false;
-    }
+    m_cudla_err = cudlaCreateDevice(0, &m_DevHandle, CUDLA_CUDA_DLA);
+    CHECK_CUDLA_ERR(m_cudla_err, "create cuDLA device");
 
-    err = cudlaModuleLoadFromMemory(m_DevHandle, m_LoadableData, m_File_size, &m_ModuleHandle, 0);
-    if (err != cudlaSuccess)
-    {
-        std::cerr << "Error in cudlaModuleLoadFromMemory = " << err << std::endl;
-        cleanUp();
-        return false;
-    }
+    m_cudla_err = cudlaModuleLoadFromMemory(m_DevHandle, m_LoadableData, m_File_size, &m_ModuleHandle, 0);
+    CHECK_CUDLA_ERR(m_cudla_err, "load cuDLA module from memory");
 
-    m_Initialized = true;
-    if (!getTensorAttr())
-    {
-        cleanUp();
-        return false;
-    }
-    std::cout << "DLA CTX INIT !!!" << std::endl;
-    return true;
-}
-
-uint64_t cuDLAContext::getInputTensorSizeWithIndex(uint8_t index) { return m_InputTensorDesc[index].size; }
-
-uint64_t cuDLAContext::getOutputTensorSizeWithIndex(uint8_t index) { return m_OutputTensorDesc[index].size; }
-
-uint32_t cuDLAContext::getNumInputTensors() { return m_NumInputTensors; }
-
-uint32_t cuDLAContext::getNumOutputTensors() { return m_NumOutputTensors; }
-
-bool cuDLAContext::getTensorAttr()
-{
-    if (!m_Initialized)
-    {
-        return false;
-    }
-    // Get tensor attributes.
-    cudlaStatus          err;
     cudlaModuleAttribute attribute;
-
-    err = cudlaModuleGetAttributes(m_ModuleHandle, CUDLA_NUM_INPUT_TENSORS, &attribute);
-    if (err != cudlaSuccess)
-    {
-        std::cerr << "Error in getting numInputTensors = " << err << std::endl;
-        cleanUp();
-        return false;
-    }
+    m_cudla_err = cudlaModuleGetAttributes(m_ModuleHandle, CUDLA_NUM_INPUT_TENSORS, &attribute);
+    CHECK_CUDLA_ERR(m_cudla_err, "cuDLA module get number of input tensors");
     m_NumInputTensors = attribute.numInputTensors;
 
-    err = cudlaModuleGetAttributes(m_ModuleHandle, CUDLA_NUM_OUTPUT_TENSORS, &attribute);
-    if (err != cudlaSuccess)
-    {
-        std::cerr << "Error in getting numOutputTensors = " << err << std::endl;
-        cleanUp();
-        return false;
-    }
+    m_cudla_err = cudlaModuleGetAttributes(m_ModuleHandle, CUDLA_NUM_OUTPUT_TENSORS, &attribute);
+    CHECK_CUDLA_ERR(m_cudla_err, "cuDLA module get number of output tensors");
     m_NumOutputTensors = attribute.numOutputTensors;
 
-    m_InputTensorDesc = (cudlaModuleTensorDescriptor *)malloc(sizeof(cudlaModuleTensorDescriptor) * m_NumInputTensors);
-    m_OutputTensorDesc =
-        (cudlaModuleTensorDescriptor *)malloc(sizeof(cudlaModuleTensorDescriptor) * m_NumOutputTensors);
-    if ((m_InputTensorDesc == NULL) || (m_OutputTensorDesc == NULL))
-    {
-        std::cerr << "Error in allocating memory for TensorDesc" << std::endl;
-        cleanUp();
-        return false;
-    }
+    m_InputTensorDescs.resize(m_NumInputTensors);
+    m_OutputTensorDescs.resize(m_NumOutputTensors);
 
-    attribute.inputTensorDesc = m_InputTensorDesc;
-    err                       = cudlaModuleGetAttributes(m_ModuleHandle, CUDLA_INPUT_TENSOR_DESCRIPTORS, &attribute);
-    if (err != cudlaSuccess)
-    {
-        std::cerr << "Error in getting input tensor descriptor = " << err << std::endl;
-        cleanUp();
-        return false;
-    }
+    attribute.inputTensorDesc = m_InputTensorDescs.data();
+    m_cudla_err               = cudlaModuleGetAttributes(m_ModuleHandle, CUDLA_INPUT_TENSOR_DESCRIPTORS, &attribute);
+    CHECK_CUDLA_ERR(m_cudla_err, "cuDLA module get input tensors descriptors");
 
-    attribute.outputTensorDesc = m_OutputTensorDesc;
-    err                        = cudlaModuleGetAttributes(m_ModuleHandle, CUDLA_OUTPUT_TENSOR_DESCRIPTORS, &attribute);
-    if (err != cudlaSuccess)
-    {
-        std::cerr << "Error in getting output tensor descriptor = " << err << std::endl;
-        cleanUp();
-        return false;
-    }
-
+    attribute.outputTensorDesc = m_OutputTensorDescs.data();
+    m_cudla_err                = cudlaModuleGetAttributes(m_ModuleHandle, CUDLA_OUTPUT_TENSOR_DESCRIPTORS, &attribute);
+    CHECK_CUDLA_ERR(m_cudla_err, "cuDLA module get output tensors descriptors");
     return true;
 }
 
-bool cuDLAContext::bufferPrep(void **in_buffers, void **out_buffers, cudaStream_t m_stream)
+uint64_t cuDLAContextHybrid::getInputTensorSizeWithIndex(uint8_t index) { return m_InputTensorDescs[index].size; }
+
+uint64_t cuDLAContextHybrid::getOutputTensorSizeWithIndex(uint8_t index) { return m_OutputTensorDescs[index].size; }
+
+uint32_t cuDLAContextHybrid::getNumInputTensors() { return m_NumInputTensors; }
+
+uint32_t cuDLAContextHybrid::getNumOutputTensors() { return m_NumOutputTensors; }
+
+bool cuDLAContextHybrid::initTask(std::vector<void *> &input_dev_buffers, std::vector<void *> &output_dev_buffers)
 {
-    if (!m_Initialized)
+    if (input_dev_buffers.size() != m_NumInputTensors || output_dev_buffers.size() != m_NumOutputTensors)
     {
-        return false;
+        DPRINTF("ERROR: number of IO tensors not match\n");
     }
-    cudlaStatus err;
 
     // Register the CUDA-allocated buffers.
-    m_InputBufferRegisteredPtr  = (uint64_t **)malloc(sizeof(uint64_t *) * m_NumInputTensors);
-    m_OutputBufferRegisteredPtr = (uint64_t **)malloc(sizeof(uint64_t *) * m_NumOutputTensors);
+    m_InputBufRegPtrs.resize(m_NumInputTensors);
+    m_OutputBufRegPtrs.resize(m_NumOutputTensors);
 
-    if ((m_InputBufferRegisteredPtr == NULL) || (m_OutputBufferRegisteredPtr == NULL))
+    for (uint32_t i = 0; i < m_NumInputTensors; i++)
     {
-        std::cerr << "Error in allocating memory for BufferRegisteredPtr" << std::endl;
-        cleanUp();
-        return false;
+        m_cudla_err = cudlaMemRegister(m_DevHandle, (uint64_t *)input_dev_buffers[i], m_InputTensorDescs[0].size,
+                                       &(m_InputBufRegPtrs[i]), 0);
+        CHECK_CUDLA_ERR(m_cudla_err, "register cuda input tensor memory to cuDLA");
     }
 
-    for (uint32_t ii = 0; ii < m_NumInputTensors; ii++)
+    for (uint32_t i = 0; i < m_NumOutputTensors; i++)
     {
-        err = cudlaMemRegister(m_DevHandle, (uint64_t *)(in_buffers[ii]), m_InputTensorDesc[0].size,
-                               &(m_InputBufferRegisteredPtr[0]), 0);
-        if (err != cudlaSuccess)
-        {
-            std::cerr << "Error in registering input tensor memory " << ii << ": " << err << std::endl;
-            cleanUp();
-            return false;
-        }
+        m_cudla_err = cudlaMemRegister(m_DevHandle, (uint64_t *)output_dev_buffers[i], m_OutputTensorDescs[i].size,
+                                       &(m_OutputBufRegPtrs[i]), 0);
+        CHECK_CUDLA_ERR(m_cudla_err, "register cuda output tensor memory to cuDLA");
     }
 
-    for (uint32_t ii = 0; ii < m_NumOutputTensors; ii++)
-    {
-        err = cudlaMemRegister(m_DevHandle, (uint64_t *)(out_buffers[ii]), m_OutputTensorDesc[ii].size,
-                               &(m_OutputBufferRegisteredPtr[ii]), 0);
-        if (err != cudlaSuccess)
-        {
-            std::cerr << "Error in registering output tensor memory " << ii << ": " << err << std::endl;
-            cleanUp();
-            return false;
-        }
-    }
-
-    std::cout << "ALL MEMORY REGISTERED SUCCESSFULLY" << std::endl;
-
-    // Memset output buffer on GPU to 0.
-    for (uint32_t ii = 0; ii < m_NumOutputTensors; ii++)
-    {
-        cudaError_t result = cudaMemsetAsync(out_buffers[ii], 0, m_OutputTensorDesc[ii].size, m_stream);
-        if (result != cudaSuccess)
-        {
-            std::cerr << "Error in enqueueing memset for output tensor " << ii << std::endl;
-            cleanUp();
-            return false;
-        }
-    }
+    m_Task.moduleHandle     = m_ModuleHandle;
+    m_Task.inputTensor      = m_InputBufRegPtrs.data();
+    m_Task.outputTensor     = m_OutputBufRegPtrs.data();
+    m_Task.numInputTensors  = m_NumInputTensors;
+    m_Task.numOutputTensors = m_NumOutputTensors;
+    m_Task.waitEvents       = nullptr;
+    m_Task.signalEvents     = nullptr;
 
     return true;
 }
 
-bool cuDLAContext::submitDLATask(cudaStream_t m_stream)
+bool cuDLAContextHybrid::submitDLATask(cudaStream_t stream)
 {
-    std::cout << "SUBMIT CUDLA TASK" << std::endl;
-    std::cout << "    Input Tensor Num: " << m_NumInputTensors << std::endl;
-    std::cout << "    Output Tensor Num: " << m_NumOutputTensors << std::endl;
-
-    cudlaTask task;
-    task.moduleHandle     = m_ModuleHandle;
-    task.inputTensor      = m_InputBufferRegisteredPtr;
-    task.outputTensor     = m_OutputBufferRegisteredPtr;
-    task.numOutputTensors = m_NumOutputTensors;
-    task.numInputTensors  = m_NumInputTensors;
-    task.waitEvents       = NULL;
-    task.signalEvents     = NULL;
-
     // Enqueue a cuDLA task.
-    cudlaStatus err = cudlaSubmitTask(m_DevHandle, &task, 1, m_stream, 0);
-    if (err != cudlaSuccess)
-    {
-        std::cerr << "Error in submitting task : " << err << std::endl;
-        cleanUp();
-        return false;
-    }
-
-    std::cout << "SUBMIT IS DONE !!!" << std::endl;
-
+    m_cudla_err = cudlaSubmitTask(m_DevHandle, &m_Task, 1, stream, 0);
+    CHECK_CUDLA_ERR(m_cudla_err, "submit cudla task");
     return true;
 }
 
-void cuDLAContext::cleanUp()
+cuDLAContextHybrid::~cuDLAContextHybrid()
 {
-    if (m_InputTensorDesc != NULL)
+    for (uint32_t i = 0; i < m_NumInputTensors; i++)
     {
-        free(m_InputTensorDesc);
-        m_InputTensorDesc = NULL;
-    }
-    if (m_OutputTensorDesc != NULL)
-    {
-        free(m_OutputTensorDesc);
-        m_OutputTensorDesc = NULL;
+        m_cudla_err = cudlaMemUnregister(m_DevHandle, m_InputBufRegPtrs[i]);
+        CHECK_CUDLA_ERR(m_cudla_err, "unregister cudla input ptr");
     }
 
-    if (m_LoadableData != NULL)
+    for (uint32_t i = 0; i < m_NumOutputTensors; i++)
     {
-        free(m_LoadableData);
-        m_LoadableData = NULL;
+        m_cudla_err = cudlaMemUnregister(m_DevHandle, m_OutputBufRegPtrs[i]);
+        CHECK_CUDLA_ERR(m_cudla_err, "unregister cudla output ptr");
     }
 
-    if (m_ModuleHandle != NULL)
-    {
-        cudlaModuleUnload(m_ModuleHandle, 0);
-        m_ModuleHandle = NULL;
-    }
+    m_cudla_err    = cudlaModuleUnload(m_ModuleHandle, 0);
+    m_ModuleHandle = nullptr;
+    CHECK_CUDLA_ERR(m_cudla_err, "unload cudla module");
 
-    if (m_DevHandle != NULL)
-    {
-        cudlaDestroyDevice(m_DevHandle);
-        m_DevHandle = NULL;
-    }
+    m_cudla_err = cudlaDestroyDevice(m_DevHandle);
+    m_DevHandle = nullptr;
+    CHECK_CUDLA_ERR(m_cudla_err, "unload cudla device handle");
 
-    if (m_InputBufferRegisteredPtr != NULL)
-    {
-        free(m_InputBufferRegisteredPtr);
-        m_InputBufferRegisteredPtr = NULL;
-    }
-
-    if (m_OutputBufferRegisteredPtr != NULL)
-    {
-        free(m_OutputBufferRegisteredPtr);
-        m_OutputBufferRegisteredPtr = NULL;
-    }
-
-    m_NumInputTensors  = 0;
-    m_NumOutputTensors = 0;
-    std::cout << "DLA CTX CLEAN UP !!!" << std::endl;
-}
-
-cuDLAContext::~cuDLAContext()
-{
-    cudlaStatus err;
-    for (uint32_t ii = 0; ii < m_NumInputTensors; ii++)
-    {
-        err = cudlaMemUnregister(m_DevHandle, m_InputBufferRegisteredPtr[ii]);
-        if (err != cudlaSuccess)
-        {
-            std::cerr << "Error in unregistering input tensor memory " << ii << ": " << err << std::endl;
-        }
-    }
-
-    for (uint32_t ii = 0; ii < m_NumOutputTensors; ii++)
-    {
-        err = cudlaMemUnregister(m_DevHandle, m_OutputBufferRegisteredPtr[ii]);
-        if (err != cudlaSuccess)
-        {
-            std::cerr << "Error in unregistering output tensor memory " << ii << ": " << err << std::endl;
-        }
-    }
+    free(m_LoadableData);
+    m_LoadableData = nullptr;
 }

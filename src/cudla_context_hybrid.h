@@ -20,7 +20,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
- 
+
 #ifndef CUDLA_CONTEXT_H
 #define CUDLA_CONTEXT_H
 
@@ -28,46 +28,44 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
-#include <iostream>
 #include <sstream>
 #include <sys/stat.h>
 #include <unordered_map>
+#include <vector>
 
 #include <cuda_runtime.h>
 #include <cudla.h>
 
-class cuDLAContext
+class cuDLAContextHybrid
 {
   public:
-    cuDLAContext(const char *loadableFilePath);
-    ~cuDLAContext();
+    cuDLAContextHybrid(const char *loadableFilePath);
+    ~cuDLAContextHybrid();
 
     uint64_t getInputTensorSizeWithIndex(uint8_t index);
     uint64_t getOutputTensorSizeWithIndex(uint8_t index);
     uint32_t getNumInputTensors();
     uint32_t getNumOutputTensors();
 
-    bool initialize();
-    bool bufferPrep(void **in_buffers, void **out_buffers, cudaStream_t m_stream);
-    bool submitDLATask(cudaStream_t m_stream);
-    void cleanUp();
+    bool initTask(std::vector<void *> &input_dev_buffers, std::vector<void *> &output_dev_buffers);
+    bool submitDLATask(cudaStream_t stream);
 
   private:
-    bool readDLALoadable(const char *loadableFilePath);
-    bool getTensorAttr();
+    bool                                     initialize();
+    bool                                     readDLALoadable(const char *loadableFilePath);
+    cudlaStatus                              m_cudla_err;
+    cudlaDevHandle                           m_DevHandle;
+    cudlaModule                              m_ModuleHandle;
+    unsigned char *                          m_LoadableData = nullptr;
+    size_t                                   m_File_size;
+    uint32_t                                 m_NumInputTensors;
+    uint32_t                                 m_NumOutputTensors;
+    std::vector<cudlaModuleTensorDescriptor> m_InputTensorDescs;
+    std::vector<cudlaModuleTensorDescriptor> m_OutputTensorDescs;
+    std::vector<uint64_t *>                  m_InputBufRegPtrs;
+    std::vector<uint64_t *>                  m_OutputBufRegPtrs;
 
-    cudlaDevHandle               m_DevHandle;
-    cudlaModule                  m_ModuleHandle;
-    unsigned char *              m_LoadableData = NULL;
-    uint32_t                     m_NumInputTensors;
-    uint32_t                     m_NumOutputTensors;
-    cudlaModuleTensorDescriptor *m_InputTensorDesc;
-    cudlaModuleTensorDescriptor *m_OutputTensorDesc;
-    uint64_t **                  m_InputBufferRegisteredPtr;
-    uint64_t **                  m_OutputBufferRegisteredPtr;
-
-    size_t m_File_size;
-    bool   m_Initialized;
+    cudlaTask m_Task;
 };
 
 #endif

@@ -153,7 +153,7 @@ class yolov5
 #ifdef USE_DLA_STANDALONE_MODE
     cuDLAContextStandalone *mCuDLACtx;
 #else
-    cuDLAContext *mCuDLACtx;
+    cuDLAContextHybrid *mCuDLACtx;
 #endif
 
     float               mInputScale   = 0.00787209;

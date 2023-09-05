@@ -59,7 +59,7 @@ yolov5::yolov5(std::string engine_path, Yolov5Backend backend)
 #ifdef USE_DLA_STANDALONE_MODE
         mCuDLACtx = new cuDLAContextStandalone(engine_path.c_str());
 #else
-        mCuDLACtx = new cuDLAContext(engine_path.c_str());
+        mCuDLACtx = new cuDLAContextHybrid(engine_path.c_str());
 #endif
         checkCudaErrors(cudaMalloc(&mInputTemp, 1 * 3 * 672 * 672 * sizeof(float)));
         void *input_buf_before_reformat;
@@ -90,7 +90,7 @@ yolov5::yolov5(std::string engine_path, Yolov5Backend backend)
 
         std::vector<void *> cudla_inputs{input_buf};
         std::vector<void *> cudla_outputs{output_buf_0, output_buf_1, output_buf_2};
-        mCuDLACtx->bufferPrep(cudla_inputs.data(), cudla_outputs.data(), mStream);
+        mCuDLACtx->initTask(cudla_inputs, cudla_outputs);
 #endif
     }
     mBindingArray.push_back(reinterpret_cast<void *>(input_buf));
