@@ -20,7 +20,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
- 
+
 #include <fstream>
 #include <json/json.h>
 #include <numeric>
@@ -59,10 +59,11 @@ std::vector<float> xyxy2xywh(float x0, float x1, float x2, float x3)
 std::vector<std::string> readCocoPaths(std::string coco_file_path)
 {
     std::vector<std::string> result;
-    const std::string  test_file_list = "./data/coco_val_2017_list.txt";
+    const std::string        test_file_list = "./data/coco_val_2017_list.txt";
     std::ifstream            coco_test_file(test_file_list);
     std::string              line;
-    if (coco_file_path.back() != '/') {
+    if (coco_file_path.back() != '/')
+    {
         coco_file_path += '/';
     }
     if (coco_test_file)
@@ -136,8 +137,8 @@ int main(int argc, char **argv)
 
     yolov5 yolov5_infer(engine_path, backend);
 
-    std::vector<cv::Mat>     bgr_imgs;
-    std::vector<std::string> imgPathList = readCocoPaths(coco_path);
+    std::vector<cv::Mat>            bgr_imgs;
+    std::vector<std::string>        imgPathList = readCocoPaths(coco_path);
     std::vector<std::vector<float>> results;
 
     if (!image_path.empty())

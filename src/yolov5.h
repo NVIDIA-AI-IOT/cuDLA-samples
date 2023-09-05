@@ -20,7 +20,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
- 
+
 #ifndef __YOLOV5_H__
 #define __YOLOV5_H__
 
@@ -156,11 +156,11 @@ class yolov5
     cuDLAContextHybrid *mCuDLACtx;
 #endif
 
-    float               mInputScale   = 0.00787209;
-    float               mOutputScale1 = 0.0546086;
-    float               mOutputScale2 = 0.148725;
-    float               mOutputScale3 = 0.0546086;
-    void* mInputTemp;
+    float mInputScale   = 0.00787209;
+    float mOutputScale1 = 0.0546086;
+    float mOutputScale2 = 0.148725;
+    float mOutputScale3 = 0.0546086;
+    void *mInputTemp;
 
     // chw16 -> chw -> reshape -> transpose operation for yolov5 heads.
     // also support chw -> chw16 for yolov5 inputs

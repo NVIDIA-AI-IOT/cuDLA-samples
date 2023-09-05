@@ -39,15 +39,44 @@
 class cuDLAContextHybrid
 {
   public:
+    //!
+    //! \brief Construct infer context from loadable
+    //!
     cuDLAContextHybrid(const char *loadableFilePath);
+
+    //!
+    //! \brief Deconstructor
+    //!
     ~cuDLAContextHybrid();
 
+    //!
+    //! \brief Get input tensor size of index
+    //!
     uint64_t getInputTensorSizeWithIndex(uint8_t index);
+
+    //!
+    //! \brief Get output tensor size of index
+    //!
     uint64_t getOutputTensorSizeWithIndex(uint8_t index);
+
+    //!
+    //! \brief Get number of input tensors
+    //!
     uint32_t getNumInputTensors();
+
+    //!
+    //! \brief Get number of output tensors
+    //!
     uint32_t getNumOutputTensors();
 
+    //!
+    //! \brief Initialize cuDLA task for submit.
+    //!
     bool initTask(std::vector<void *> &input_dev_buffers, std::vector<void *> &output_dev_buffers);
+
+    //!
+    //! \brief launch cuDLA task
+    //!
     bool submitDLATask(cudaStream_t stream);
 
   private:

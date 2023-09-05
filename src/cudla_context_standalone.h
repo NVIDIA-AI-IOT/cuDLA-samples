@@ -20,112 +20,142 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
- 
 
 #ifndef CUDLA_CONTEXT_STANDALONE_H
 #define CUDLA_CONTEXT_STANDALONE_H
 
-#include "cudla.h"
-#include "nvscierror.h"
-#include "nvscibuf.h"
-#include "nvscisync.h"
-#include "cuda_runtime.h"
 #include "cuda.h"
+#include "cuda_runtime.h"
+#include "cudla.h"
+#include "nvscibuf.h"
+#include "nvscierror.h"
+#include "nvscisync.h"
 
 #include <vector>
 
 struct NvSciBufferContext
 {
-  // cudla_tensor_desc is a pointer to the element of
-  // m_Input_Tensor_Descs or m_Output_Tensor_Descs,
-  // so explicitly release is unecessary.
-  cudlaModuleTensorDescriptor* cudla_tensor_desc;
-  NvSciBufAttrList unreconciled_attr_list;
-  NvSciBufAttrList reconciled_attr_list;
-  NvSciBufAttrList conflict_list;
-  NvSciBufObj buf_obj;
-  cudlaExternalMemoryHandleDesc cudla_ext_mem_desc;
-  uint64_t* buf_registered_ptr_cudla;
-  cudaExternalMemoryHandleDesc cuda_mem_handle_desc;
-  cudaExternalMemoryBufferDesc cuda_ext_buffer_desc;
-  cudaExternalMemory_t ext_mem_raw_buf;
-  void* buf_gpu;
+    // cudla_tensor_desc is a pointer to the element of
+    // m_Input_Tensor_Descs or m_Output_Tensor_Descs,
+    // so explicitly release is unecessary.
+    cudlaModuleTensorDescriptor * cudla_tensor_desc;
+    NvSciBufAttrList              unreconciled_attr_list;
+    NvSciBufAttrList              reconciled_attr_list;
+    NvSciBufAttrList              conflict_list;
+    NvSciBufObj                   buf_obj;
+    cudlaExternalMemoryHandleDesc cudla_ext_mem_desc;
+    uint64_t *                    buf_registered_ptr_cudla;
+    cudaExternalMemoryHandleDesc  cuda_mem_handle_desc;
+    cudaExternalMemoryBufferDesc  cuda_ext_buffer_desc;
+    cudaExternalMemory_t          ext_mem_raw_buf;
+    void *                        buf_gpu;
 };
 
 struct NvSciSyncContext
 {
-  NvSciSyncAttrList signaler_attr_list;
-  NvSciSyncAttrList waiter_attr_list;
-  NvSciSyncAttrList reconciled_attr_list;
-  NvSciSyncAttrList conflict_list;
-  NvSciSyncObj sync_obj;
-  uint64_t* nvsci_sync_obj_reg_ptr;
-  cudlaExternalSemaphoreHandleDesc cudla_ext_sema_mem_desc;
-  NvSciSyncFence* nvsci_fence_ptr;
-  CudlaFence* cudla_fence_ptr;
+    NvSciSyncAttrList                signaler_attr_list;
+    NvSciSyncAttrList                waiter_attr_list;
+    NvSciSyncAttrList                reconciled_attr_list;
+    NvSciSyncAttrList                conflict_list;
+    NvSciSyncObj                     sync_obj;
+    uint64_t *                       nvsci_sync_obj_reg_ptr;
+    cudlaExternalSemaphoreHandleDesc cudla_ext_sema_mem_desc;
+    NvSciSyncFence *                 nvsci_fence_ptr;
+    CudlaFence *                     cudla_fence_ptr;
 };
 
 class cuDLAContextStandalone
 {
   public:
+    //!
+    //! \brief Construct infer context from loadable
+    //!
     cuDLAContextStandalone(const char *loadableFilePath);
+
+    //!
+    //! \brief Deconstructor
+    //!
     ~cuDLAContextStandalone();
 
+    //!
+    //! \brief Get input tensor size of index
+    //!
     uint64_t getInputTensorSizeWithIndex(int32_t index);
+
+    //!
+    //! \brief Get output tensor size of index
+    //!
     uint64_t getOutputTensorSizeWithIndex(int32_t index);
+
+    //!
+    //! \brief Get number of input tensors
+    //!
     uint32_t getNumInputTensors();
+
+    //!
+    //! \brief Get number of output tensors
+    //!
     uint32_t getNumOutputTensors();
 
-    void* getInputCudaBufferPtr(int32_t index);
-    void* getOutputCudaBufferPtr(int32_t index);
+    //!
+    //! \brief Get input CUDA buffer ptr
+    //!
+    void *getInputCudaBufferPtr(int32_t index);
 
+    //!
+    //! \brief Get output CUDA buffer ptr
+    //!
+    void *getOutputCudaBufferPtr(int32_t index);
+
+    //!
+    //! \brief launch cuDLA task
+    //!
     int submitDLATask(cudaStream_t streamToRun);
 
   private:
     bool readDLALoadable(const char *loadableFilePath);
     bool initialize();
-    void releaseNvSciBufferContexts(std::vector<NvSciBufferContext>& contexts);
-    void releaseNvSciSyncContext(NvSciSyncContext& context);
+    void releaseNvSciBufferContexts(std::vector<NvSciBufferContext> &contexts);
+    void releaseNvSciSyncContext(NvSciSyncContext &context);
 
-    bool m_Has_initialized;
+    bool        m_Has_initialized;
     cudlaStatus m_cudla_err;
-    cudaError m_cuda_err;
-    NvSciError m_nvsci_err;
+    cudaError   m_cuda_err;
+    NvSciError  m_nvsci_err;
 
-    unsigned char * m_LoadableData = nullptr;
-    size_t m_File_size;
+    unsigned char *m_LoadableData = nullptr;
+    size_t         m_File_size;
 
-    uint32_t m_NumInputTensors  = 0;
-    uint32_t m_NumOutputTensors = 0;
+    uint32_t                        m_NumInputTensors  = 0;
+    uint32_t                        m_NumOutputTensors = 0;
     std::vector<NvSciBufferContext> m_InputsBufContext;
     std::vector<NvSciBufferContext> m_OutputsBufContext;
     // m_InputBufRegPtrs and m_OutputBufRegPtrs are
     // associate with std::vector<NvSciBufferContext>
     // so we don't need to release it explicitly.
-    std::vector<uint64_t*> m_InputBufRegPtrs;
-    std::vector<uint64_t*> m_OutputBufRegPtrs;
+    std::vector<uint64_t *>                  m_InputBufRegPtrs;
+    std::vector<uint64_t *>                  m_OutputBufRegPtrs;
     std::vector<cudlaModuleTensorDescriptor> m_Input_Tensor_Descs;
     std::vector<cudlaModuleTensorDescriptor> m_Output_Tensor_Descs;
 
-    cudlaDevHandle m_DevHandle;
-    cudlaModule m_ModuleHandle;
+    cudlaDevHandle       m_DevHandle;
+    cudlaModule          m_ModuleHandle;
     cudlaModuleAttribute m_cudla_module_attribute;
 
-    NvSciBufModule m_NvSciBufModule;
+    NvSciBufModule  m_NvSciBufModule;
     NvSciSyncModule m_NvSciSyncModule;
 
-    cudlaWaitEvents* m_WaitEvents;
-    NvSciSyncContext m_WaitEventContext;
-    cudaExternalSemaphore_t m_WaitSem;
+    cudlaWaitEvents *               m_WaitEvents;
+    NvSciSyncContext                m_WaitEventContext;
+    cudaExternalSemaphore_t         m_WaitSem;
     cudaExternalSemaphoreWaitParams m_WaitParams;
 
-    cudlaSignalEvents* m_SignalEvents;
-    NvSciSyncContext m_SignalEventContext;
-    cudaExternalSemaphore_t m_SignalSem;
+    cudlaSignalEvents *               m_SignalEvents;
+    NvSciSyncContext                  m_SignalEventContext;
+    cudaExternalSemaphore_t           m_SignalSem;
     cudaExternalSemaphoreSignalParams m_SignalParams;
 
     cudlaTask m_Task;
-
 };
 
 #endif
