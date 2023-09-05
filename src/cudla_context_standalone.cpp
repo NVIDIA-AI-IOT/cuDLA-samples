@@ -134,7 +134,7 @@ cuDLAContextStandalone::cuDLAContextStandalone(const char *loadableFilePath)
 }
 
 // Read loadable in to memory
-bool cuDLAContextStandalone::readDLALoadable(const char *loadableFilePath)
+void cuDLAContextStandalone::readDLALoadable(const char *loadableFilePath)
 {
     FILE *      fp = nullptr;
     struct stat st;
@@ -144,13 +144,11 @@ bool cuDLAContextStandalone::readDLALoadable(const char *loadableFilePath)
     if (fp == nullptr)
     {
         DPRINTF("Cannot open file %s", loadableFilePath);
-        return false;
     }
 
     if (stat(loadableFilePath, &st) != 0)
     {
         DPRINTF("Cannot open file %s", loadableFilePath);
-        return false;
     }
 
     m_File_size = st.st_size;
@@ -159,7 +157,6 @@ bool cuDLAContextStandalone::readDLALoadable(const char *loadableFilePath)
     if (m_LoadableData == nullptr)
     {
         DPRINTF("Cannot Allocate memory for loadable");
-        return false;
     }
 
     actually_read = fread(m_LoadableData, 1, m_File_size, fp);
@@ -167,13 +164,11 @@ bool cuDLAContextStandalone::readDLALoadable(const char *loadableFilePath)
     {
         free(m_LoadableData);
         DPRINTF("Read wrong size");
-        return false;
     }
     fclose(fp);
-    return true;
 }
 
-bool cuDLAContextStandalone::initialize()
+void cuDLAContextStandalone::initialize()
 {
     // Create CUDLA device
     m_cudla_err = cudlaCreateDevice(0, &m_DevHandle, CUDLA_STANDALONE);
@@ -377,7 +372,6 @@ bool cuDLAContextStandalone::initialize()
     m_Task.outputTensor     = m_OutputBufRegPtrs.data();
     m_Task.waitEvents       = m_WaitEvents;
     m_Task.signalEvents     = m_SignalEvents;
-    return true;
 }
 
 uint64_t cuDLAContextStandalone::getInputTensorSizeWithIndex(int32_t index) { return m_Input_Tensor_Descs[index].size; }

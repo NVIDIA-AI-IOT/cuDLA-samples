@@ -50,7 +50,7 @@ cuDLAContextHybrid::cuDLAContextHybrid(const char *loadableFilePath)
     initialize();
 }
 
-bool cuDLAContextHybrid::readDLALoadable(const char *loadableFilePath)
+void cuDLAContextHybrid::readDLALoadable(const char *loadableFilePath)
 {
     FILE *      fp = nullptr;
     struct stat st;
@@ -60,13 +60,11 @@ bool cuDLAContextHybrid::readDLALoadable(const char *loadableFilePath)
     if (fp == nullptr)
     {
         DPRINTF("Cannot open file %s", loadableFilePath);
-        return false;
     }
 
     if (stat(loadableFilePath, &st) != 0)
     {
         DPRINTF("Cannot open file %s", loadableFilePath);
-        return false;
     }
 
     m_File_size = st.st_size;
@@ -75,7 +73,6 @@ bool cuDLAContextHybrid::readDLALoadable(const char *loadableFilePath)
     if (m_LoadableData == nullptr)
     {
         m_LoadableData = (unsigned char *)malloc(m_File_size);
-        return false;
     }
 
     actually_read = fread(m_LoadableData, 1, m_File_size, fp);
@@ -83,13 +80,11 @@ bool cuDLAContextHybrid::readDLALoadable(const char *loadableFilePath)
     {
         free(m_LoadableData);
         DPRINTF("Read wrong size");
-        return false;
     }
     fclose(fp);
-    return true;
 }
 
-bool cuDLAContextHybrid::initialize()
+void cuDLAContextHybrid::initialize()
 {
     m_cudla_err = cudlaCreateDevice(0, &m_DevHandle, CUDLA_CUDA_DLA);
     CHECK_CUDLA_ERR(m_cudla_err, "create cuDLA device");
@@ -116,7 +111,6 @@ bool cuDLAContextHybrid::initialize()
     attribute.outputTensorDesc = m_OutputTensorDescs.data();
     m_cudla_err                = cudlaModuleGetAttributes(m_ModuleHandle, CUDLA_OUTPUT_TENSOR_DESCRIPTORS, &attribute);
     CHECK_CUDLA_ERR(m_cudla_err, "cuDLA module get output tensors descriptors");
-    return true;
 }
 
 uint64_t cuDLAContextHybrid::getInputTensorSizeWithIndex(uint8_t index) { return m_InputTensorDescs[index].size; }

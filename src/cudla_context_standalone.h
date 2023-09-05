@@ -113,8 +113,8 @@ class cuDLAContextStandalone
     int submitDLATask(cudaStream_t streamToRun);
 
   private:
-    bool readDLALoadable(const char *loadableFilePath);
-    bool initialize();
+    void readDLALoadable(const char *loadableFilePath);
+    void initialize();
     void releaseNvSciBufferContexts(std::vector<NvSciBufferContext> &contexts);
     void releaseNvSciSyncContext(NvSciSyncContext &context);
 

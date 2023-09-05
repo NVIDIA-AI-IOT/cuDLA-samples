@@ -160,12 +160,12 @@ class yolov5
     float mOutputScale1 = 0.0546086;
     float mOutputScale2 = 0.148725;
     float mOutputScale3 = 0.0546086;
-    void *mInputTemp;
+    void * mInputTemp1;
+    void * mInputTemp2;
 
     // chw16 -> chw -> reshape -> transpose operation for yolov5 heads.
     // also support chw -> chw16 for yolov5 inputs
     ReformatRunner *    mReformatRunner;
-    std::vector<void *> mInputCHWPad16;
     std::vector<void *> src;
     std::vector<void *> dst{3};
 

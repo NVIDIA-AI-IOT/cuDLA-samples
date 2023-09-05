@@ -61,19 +61,16 @@ yolov5::yolov5(std::string engine_path, Yolov5Backend backend)
 #else
         mCuDLACtx = new cuDLAContextHybrid(engine_path.c_str());
 #endif
-        checkCudaErrors(cudaMalloc(&mInputTemp, 1 * 3 * 672 * 672 * sizeof(float)));
-        void *input_buf_before_reformat;
+        checkCudaErrors(cudaMalloc(&mInputTemp1, 1 * 3 * 672 * 672 * sizeof(float)));
         if (mBackend == Yolov5Backend::CUDLA_FP16)
         {
             // Same size as cuDLA input
-            checkCudaErrors(cudaMalloc(&input_buf_before_reformat, mCuDLACtx->getInputTensorSizeWithIndex(0)));
-            mInputCHWPad16.push_back(input_buf_before_reformat);
+            checkCudaErrors(cudaMalloc(&mInputTemp2, mCuDLACtx->getInputTensorSizeWithIndex(0)));
         }
         if (mBackend == Yolov5Backend::CUDLA_INT8)
         {
             // For int8, we need to do reformat on FP32, then cast to INT8, so we need 4x space.
-            checkCudaErrors(cudaMalloc(&input_buf_before_reformat, 4 * mCuDLACtx->getInputTensorSizeWithIndex(0)));
-            mInputCHWPad16.push_back(input_buf_before_reformat);
+            checkCudaErrors(cudaMalloc(&mInputTemp2, 4 * mCuDLACtx->getInputTensorSizeWithIndex(0)));
         }
 #ifdef USE_DLA_STANDALONE_MODE
         input_buf    = mCuDLACtx->getInputCudaBufferPtr(0);
@@ -226,18 +223,20 @@ int yolov5::pushImg(void *imgBuffer, int numImg, bool fromCPU)
 {
     if (mBackend == Yolov5Backend::CUDLA_FP16)
     {
-        checkCudaErrors(cudaMemcpy(mInputTemp, imgBuffer, 1 * 3 * 672 * 672 * sizeof(float), cudaMemcpyHostToDevice));
-        convert_float_to_half((float *)mInputTemp, (__half *)mInputCHWPad16[0], 1 * 3 * 672 * 672);
-        mReformatRunner->ReformatImage(mInputCHWPad16.data(), mBindingArray.data(), mStream);
+        checkCudaErrors(cudaMemcpy(mInputTemp1, imgBuffer, 1 * 3 * 672 * 672 * sizeof(float), cudaMemcpyHostToDevice));
+        convert_float_to_half((float *)mInputTemp1, (__half *)mInputTemp2, 1 * 3 * 672 * 672);
+        std::vector<void *> vec_temp_2{mInputTemp2};
+        mReformatRunner->ReformatImage(vec_temp_2.data(), mBindingArray.data(), mStream);
     }
     if (mBackend == Yolov5Backend::CUDLA_INT8)
     {
-        checkCudaErrors(cudaMemcpy(mInputTemp, imgBuffer, 1 * 3 * 672 * 672 * sizeof(float), cudaMemcpyHostToDevice));
-        std::vector<void *> vec_temp{mInputTemp};
-        mReformatRunner->ReformatImageV2(vec_temp.data(), mInputCHWPad16.data(), mStream);
+        checkCudaErrors(cudaMemcpy(mInputTemp1, imgBuffer, 1 * 3 * 672 * 672 * sizeof(float), cudaMemcpyHostToDevice));
+        std::vector<void *> vec_temp_1{mInputTemp1};
+        std::vector<void *> vec_temp_2{mInputTemp2};
+        mReformatRunner->ReformatImageV2(vec_temp_1.data(), vec_temp_2.data(), mStream);
         checkCudaErrors(cudaStreamSynchronize(mStream));
         // dla_hwc4 format, so 1*4*672*672
-        convert_float_to_int8((float *)mInputCHWPad16[0], (int8_t *)mBindingArray[0], 1 * 4 * 672 * 672, mInputScale);
+        convert_float_to_int8((float *)mInputTemp2, (int8_t *)mBindingArray[0], 1 * 4 * 672 * 672, mInputScale);
     }
     mImgPushed += numImg;
     return 0;

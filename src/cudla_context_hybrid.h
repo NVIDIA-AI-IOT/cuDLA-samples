@@ -30,7 +30,6 @@
 #include <fstream>
 #include <sstream>
 #include <sys/stat.h>
-#include <unordered_map>
 #include <vector>
 
 #include <cuda_runtime.h>
@@ -80,8 +79,8 @@ class cuDLAContextHybrid
     bool submitDLATask(cudaStream_t stream);
 
   private:
-    bool                                     initialize();
-    bool                                     readDLALoadable(const char *loadableFilePath);
+    void                                     initialize();
+    void                                     readDLALoadable(const char *loadableFilePath);
     cudlaStatus                              m_cudla_err;
     cudlaDevHandle                           m_DevHandle;
     cudlaModule                              m_ModuleHandle;
