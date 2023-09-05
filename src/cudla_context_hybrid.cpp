@@ -60,11 +60,13 @@ void cuDLAContextHybrid::readDLALoadable(const char *loadableFilePath)
     if (fp == nullptr)
     {
         DPRINTF("Cannot open file %s", loadableFilePath);
+        exit(1);
     }
 
     if (stat(loadableFilePath, &st) != 0)
     {
         DPRINTF("Cannot open file %s", loadableFilePath);
+        exit(1);
     }
 
     m_File_size = st.st_size;
@@ -79,7 +81,8 @@ void cuDLAContextHybrid::readDLALoadable(const char *loadableFilePath)
     if (actually_read != m_File_size)
     {
         free(m_LoadableData);
-        DPRINTF("Read wrong size");
+        DPRINTF("Read wrong size\n");
+        exit(1);
     }
     fclose(fp);
 }

@@ -144,11 +144,13 @@ void cuDLAContextStandalone::readDLALoadable(const char *loadableFilePath)
     if (fp == nullptr)
     {
         DPRINTF("Cannot open file %s", loadableFilePath);
+        exit(1);
     }
 
     if (stat(loadableFilePath, &st) != 0)
     {
         DPRINTF("Cannot open file %s", loadableFilePath);
+        exit(1);
     }
 
     m_File_size = st.st_size;
@@ -157,6 +159,7 @@ void cuDLAContextStandalone::readDLALoadable(const char *loadableFilePath)
     if (m_LoadableData == nullptr)
     {
         DPRINTF("Cannot Allocate memory for loadable");
+        exit(1);
     }
 
     actually_read = fread(m_LoadableData, 1, m_File_size, fp);
@@ -164,6 +167,7 @@ void cuDLAContextStandalone::readDLALoadable(const char *loadableFilePath)
     {
         free(m_LoadableData);
         DPRINTF("Read wrong size");
+        exit(1);
     }
     fclose(fp);
 }
