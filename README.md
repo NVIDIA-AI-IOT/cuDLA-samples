@@ -54,7 +54,7 @@ bash data/model/build_dla_standalone_loadable.sh
 bash src/matx_reformat/build_matx_reformat.sh
 ```
 
-Run the sample with DLA hybrid mode
+Run the sample with cuDLA hybrid mode
 ```
 make clean
 # Run INT8 inference on single image
@@ -63,7 +63,7 @@ make run
 make validate_cudla_int8 # or make validate_cudla_fp16
 ```
 
-Run the sample with DLA standalone mode
+Run the sample with cuDLA standalone mode
 ```
 # "make clean" is needed when switch between hybrid mode and standalone mode
 make clean
@@ -102,19 +102,19 @@ Note:
 - If we use `int8:hwc4 in + int8:chw32 out` then we can get perf of about 2.4ms(bs=1) for DLA INT8, but it will lead to small accuracy drop. We will optimize this in the future.
 - The inference time(median GPU computing time) here is taken with trtexec which use some pre-launch technique to maximize the through put, so it's slightly better than the inference time measure in the pipeline.
 
-# DLA Hybrid Mode and DLA Standalone Mode
+# cuDLA Hybrid Mode and cuDLA Standalone Mode
 
-This sample demonstrates how to use DLA hybrid mode and DLA standalone mode for a CUDA->cuDLA->CUDA pipeline. More details on DLA hybrid mode and DLA standalone mode can be found at https://docs.nvidia.com/cuda/cuda-for-tegra-appnote/index.html#memory-model.
+This sample demonstrates how to use cuDLA hybrid mode and cuDLA standalone mode for a CUDA->cuDLA->CUDA pipeline. More details on cuDLA hybrid mode and cuDLA standalone mode can be found at https://docs.nvidia.com/cuda/cuda-for-tegra-appnote/index.html#memory-model.
 
-Using DLA hybrid mode allows quick integration with other CUDA tasks, all we need to do is register CUDA memory to cuDLA.
+Using cuDLA hybrid mode allows quick integration with other CUDA tasks, all we need to do is register CUDA memory to cuDLA.
 
 ![dla_hybrid_mode](./data/images/dla_hybrid_mode.png)
 
-Use DLA standalone mode can prevent the CUDA context creation, and thus improve the parallelism with other GPU task. cuDLA's standalone mode make use of NvSci to finish the data transfer and synchronization with other modules like camera, GPU or CPU.
+Use cuDLA standalone mode can prevent the CUDA context creation, and thus improve the parallelism with other GPU task. cuDLA's standalone mode make use of NvSci to finish the data transfer and synchronization with other modules like camera, GPU or CPU.
 
 ![dla_standalone_mode](./data/images/dla_standalone_mode.png)
 
-Our DLA hybrid mode context code and standalone mode context code has no other dependencies from the sample, thus it can be integrated to user's application quickly. Just copy the src/cuda_context_hybird.* or src/cuda_context_standalone.* to your own project, add necessary include path and link libraries(Check ./Makefile). then you can make use of our code directly.
+Our cuDLA hybrid mode context code and standalone mode context code has no other dependencies from the sample, thus it can be integrated to user's application quickly. Just copy the src/cuda_context_hybird.* or src/cuda_context_standalone.* to your own project, add necessary include path and link libraries(Check ./Makefile). then you can make use of our code directly.
 # Notes
 
 - The scale used for FP32 to INT8 conversion in pre-processing is hardcoded, which value is from the first layer of the calibration cache, check [mInputScale](./src/yolov5.h) and [images: 3c00f9f4](./data/model/qat2ptq.cache). For more information about QAT, check [pytorch-quantization](https://github.com/NVIDIA/TensorRT/tree/main/tools/pytorch-quantization). For more information about quantization inside TensorRT, check [TensorRT Developer Guide](https://docs.nvidia.com/deeplearning/tensorrt/developer-guide/index.html#working-with-int8)
