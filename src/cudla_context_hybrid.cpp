@@ -137,7 +137,7 @@ bool cuDLAContextHybrid::initTask(std::vector<void *> &input_dev_buffers, std::v
 
     for (uint32_t i = 0; i < m_NumInputTensors; i++)
     {
-        m_cudla_err = cudlaMemRegister(m_DevHandle, (uint64_t *)input_dev_buffers[i], m_InputTensorDescs[0].size,
+        m_cudla_err = cudlaMemRegister(m_DevHandle, (uint64_t *)input_dev_buffers[i], m_InputTensorDescs[i].size,
                                        &(m_InputBufRegPtrs[i]), 0);
         CHECK_CUDLA_ERR(m_cudla_err, "register cuda input tensor memory to cuDLA");
     }
