@@ -2,7 +2,7 @@
 
 This sample demonstrates QAT training&deploying YOLOv5s on Orin DLA, which includes:
 1. YOLOv5s QAT training. - see [export](./export)
-2. Deploy YOLOv5s QAT model with TensorRT and cuDLA.
+2. Deploy YOLOv5s QAT model with and cuDLA hybrid mode and cuDLA standalone mode.
     - Convert QAT model to PTQ model and INT8 calibration cache. - see [export](./export)
     - Build DLA standalone loadable with TensorRT(INT8/FP16). - see [data/model](./data/model)
     - Load and run the DLA loadable with cuDLA. - see [src](./src)
