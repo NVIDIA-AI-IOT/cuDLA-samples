@@ -133,3 +133,4 @@ The INT8 cuDLA inference in this sample uses _INT8 Input:kDLA_LINEAR,kDLA_HWC4 +
 # Reference Link
 https://github.com/NVIDIA/Deep-Learning-Accelerator-SW  
 https://developer.nvidia.com/blog/maximizing-deep-learning-performance-on-nvidia-jetson-orin-with-dla 
+https://developer.nvidia.com/blog/deploying-yolov5-on-nvidia-jetson-orin-with-cudla-quantization-aware-training-to-inference 
