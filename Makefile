@@ -30,8 +30,10 @@ ALL_CCFLAGS += --std=c++14 -Wno-deprecated-declarations -Wall
 
 ifeq ($(USE_DLA_STANDALONE_MODE),1)
     ALL_CCFLAGS += -DUSE_DLA_STANDALONE_MODE
+	ifeq ($(USE_DETERMINISTIC_SEMAPHORE),1)
+		ALL_CCFLAGS += -DUSE_DETERMINISTIC_SEMAPHORE
+	endif
 endif
-
 
 ifeq ($(DEBUG),1)
     ALL_CCFLAGS += -g

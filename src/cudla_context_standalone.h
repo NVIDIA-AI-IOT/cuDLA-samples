@@ -155,6 +155,14 @@ class cuDLAContextStandalone
     cudaExternalSemaphore_t           m_SignalSem;
     cudaExternalSemaphoreSignalParams m_SignalParams;
 
+#ifdef USE_DETERMINISTIC_SEMAPHORE
+    bool m_RequireDeterFences = true;
+    NvSciSyncAttrKeyValuePair mKvPair[1];
+    uint64_t m_SignalerID = 0;
+    uint64_t m_SignalerValue = 0;
+    uint64_t m_WaiterID = 0;
+    uint64_t m_WaiterValue = 0;
+#endif
     cudlaTask m_Task;
 };
 

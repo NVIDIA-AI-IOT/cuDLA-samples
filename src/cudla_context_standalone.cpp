@@ -288,6 +288,14 @@ void cuDLAContextStandalone::initialize()
     CHECK_CUDLA_ERR(m_cudla_err, "get NvSci waiter sync attributes");
     m_cuda_err = cudaDeviceGetNvSciSyncAttributes(m_WaitEventContext.signaler_attr_list, 0, cudaNvSciSyncAttrSignal);
     CHECK_CUDA_ERR(m_cuda_err, "cuda get NvSci signal list");
+#ifdef USE_DETERMINISTIC_SEMAPHORE
+    memset(mKvPair, 0, sizeof(mKvPair));
+    mKvPair[0].attrKey = NvSciSyncAttrKey_RequireDeterministicFences;
+    mKvPair[0].value = (const void*)&m_RequireDeterFences;
+    mKvPair[0].len = sizeof(m_RequireDeterFences);
+    CHECK_NVSCI_ERR(NvSciSyncAttrListSetAttrs(m_WaitEventContext.waiter_attr_list, mKvPair, 1),
+        "USE_DETERMINISTIC_SEMAPHORE: set waiter's waiter attr list");
+#endif // #ifdef USE_DETERMINISTIC_SEMAPHORE
     NvSciSyncAttrList wait_event_attrs[2] = {m_WaitEventContext.signaler_attr_list,
                                              m_WaitEventContext.waiter_attr_list};
     m_nvsci_err = NvSciSyncAttrListReconcile(wait_event_attrs, 2, &(m_WaitEventContext.reconciled_attr_list),
@@ -311,6 +319,15 @@ void cuDLAContextStandalone::initialize()
     m_WaitEventContext.cudla_fence_ptr->fence = m_WaitEventContext.nvsci_fence_ptr;
     m_WaitEventContext.cudla_fence_ptr->type  = CUDLA_NVSCISYNC_FENCE;
     m_WaitEvents->preFences                   = m_WaitEventContext.cudla_fence_ptr;
+#ifdef USE_DETERMINISTIC_SEMAPHORE
+    // updated code: binding fence with syncobj with fence value
+    m_nvsci_err = NvSciSyncFenceUpdateFence(m_WaitEventContext.sync_obj, m_WaiterID, m_WaiterValue, m_WaitEventContext.nvsci_fence_ptr);
+    CHECK_NVSCI_ERR(m_nvsci_err, "USE_DETERMINISTIC_SEMAPHORE: update waiter fence");
+    m_nvsci_err = NvSciSyncFenceExtractFence(m_WaitEventContext.nvsci_fence_ptr,&m_WaiterID,&m_WaiterValue);
+    CHECK_NVSCI_ERR(m_nvsci_err, "USE_DETERMINISTIC_SEMAPHORE: extract waiter fence");
+    m_nvsci_err = NvSciSyncFenceUpdateFence(m_WaitEventContext.sync_obj, m_WaiterID, ++m_WaiterValue, m_WaitEventContext.nvsci_fence_ptr);
+    CHECK_NVSCI_ERR(m_nvsci_err, "USE_DETERMINISTIC_SEMAPHORE: update waiter fence");
+#endif // #ifdef USE_DETERMINISTIC_SEMAPHORE
 
     // Import semaphore to cuda
     cudaExternalSemaphoreHandleDesc signalExtSemDesc;
@@ -332,6 +349,14 @@ void cuDLAContextStandalone::initialize()
     CHECK_CUDLA_ERR(m_cudla_err, "get NvSci sync attributes");
     m_cuda_err = cudaDeviceGetNvSciSyncAttributes(m_SignalEventContext.waiter_attr_list, 0, cudaNvSciSyncAttrWait);
     CHECK_CUDA_ERR(m_cuda_err, "cuda get NvSci wait attribute list");
+#ifdef USE_DETERMINISTIC_SEMAPHORE
+    memset(mKvPair, 0, sizeof(mKvPair));
+    mKvPair[0].attrKey = NvSciSyncAttrKey_RequireDeterministicFences;
+    mKvPair[0].value = (const void*)&m_RequireDeterFences;
+    mKvPair[0].len = sizeof(m_RequireDeterFences);
+    CHECK_NVSCI_ERR(NvSciSyncAttrListSetAttrs(m_SignalEventContext.waiter_attr_list, mKvPair, 1),
+        "USE_DETERMINISTIC_SEMAPHORE: set signaler's waiter attr list");
+#endif // #ifdef USE_DETERMINISTIC_SEMAPHORE
     NvSciSyncAttrList signal_event_attrs[2] = {m_SignalEventContext.signaler_attr_list,
                                                m_SignalEventContext.waiter_attr_list};
     m_nvsci_err = NvSciSyncAttrListReconcile(signal_event_attrs, 2, &(m_SignalEventContext.reconciled_attr_list),
@@ -353,9 +378,22 @@ void cuDLAContextStandalone::initialize()
     m_SignalEvents->devPtrs                     = &(m_SignalEventContext.nvsci_sync_obj_reg_ptr);
     m_SignalEventContext.nvsci_fence_ptr        = (NvSciSyncFence *)calloc(1, sizeof(NvSciSyncFence));
     m_SignalEventContext.cudla_fence_ptr        = (CudlaFence *)malloc(sizeof(CudlaFence));
+#ifdef USE_DETERMINISTIC_SEMAPHORE
+    m_SignalEventContext.cudla_fence_ptr->fence = nullptr;
+#else
     m_SignalEventContext.cudla_fence_ptr->fence = m_SignalEventContext.nvsci_fence_ptr;
+#endif // #ifdef USE_DETERMINISTIC_SEMAPHORE
     m_SignalEventContext.cudla_fence_ptr->type  = CUDLA_NVSCISYNC_FENCE;
     m_SignalEvents->eofFences                   = m_SignalEventContext.cudla_fence_ptr;
+#ifdef USE_DETERMINISTIC_SEMAPHORE
+    // updated code: binding fence with syncobj with expected fence value after task completion
+    m_nvsci_err = NvSciSyncFenceUpdateFence(m_SignalEventContext.sync_obj, m_SignalerID, m_SignalerValue, m_SignalEventContext.nvsci_fence_ptr);
+    CHECK_NVSCI_ERR(m_nvsci_err, "USE_DETERMINISTIC_SEMAPHORE: update signaler fence");
+    m_nvsci_err = NvSciSyncFenceExtractFence(m_SignalEventContext.nvsci_fence_ptr, &m_SignalerID, &m_SignalerValue);
+    CHECK_NVSCI_ERR(m_nvsci_err, "USE_DETERMINISTIC_SEMAPHORE: extract signaler fence");
+    m_nvsci_err = NvSciSyncFenceUpdateFence(m_SignalEventContext.sync_obj, m_SignalerID, ++m_SignalerValue, m_SignalEventContext.nvsci_fence_ptr);
+    CHECK_NVSCI_ERR(m_nvsci_err, "USE_DETERMINISTIC_SEMAPHORE: update signaler fence");
+#endif // #ifdef USE_DETERMINISTIC_SEMAPHORE
 
     // Import semaphore to cuda
     cudaExternalSemaphoreHandleDesc waiterExtSemDesc;
@@ -400,6 +438,21 @@ int cuDLAContextStandalone::submitDLATask(cudaStream_t streamToRun)
     CHECK_CUDLA_ERR(m_cudla_err, "submit cudla task");
     m_cuda_err = cudaWaitExternalSemaphoresAsync(&m_WaitSem, &m_WaitParams, 1, streamToRun);
     CHECK_CUDA_ERR(m_cuda_err, "wait external semaphores on previous stream");
+#ifdef USE_DETERMINISTIC_SEMAPHORE
+    // update prefence for next submission
+    m_nvsci_err = NvSciSyncFenceExtractFence(m_WaitEventContext.nvsci_fence_ptr ,&m_WaiterID, &m_WaiterValue);
+    CHECK_NVSCI_ERR(m_nvsci_err, "USE_DETERMINISTIC_SEMAPHORE: extract waiter fence");
+    m_nvsci_err = NvSciSyncFenceUpdateFence(m_WaitEventContext.sync_obj,
+        m_WaiterID,++m_WaiterValue, m_WaitEventContext.nvsci_fence_ptr);
+    CHECK_NVSCI_ERR(m_nvsci_err, "USE_DETERMINISTIC_SEMAPHORE: update waiter fence");
+
+    // update Eoffence for next submission
+    m_nvsci_err = NvSciSyncFenceExtractFence(m_SignalEventContext.nvsci_fence_ptr, &m_SignalerID, &m_SignalerValue);
+    CHECK_NVSCI_ERR(m_nvsci_err, "USE_DETERMINISTIC_SEMAPHORE: extract signaler fence");
+    m_nvsci_err = NvSciSyncFenceUpdateFence(m_SignalEventContext.sync_obj, m_SignalerID,
+        ++m_SignalerValue, m_SignalEventContext.nvsci_fence_ptr);
+    CHECK_NVSCI_ERR(m_nvsci_err, "USE_DETERMINISTIC_SEMAPHORE: update signaler fence");
+#endif // #ifdef USE_DETERMINISTIC_SEMAPHORE
     return 0;
 }
 

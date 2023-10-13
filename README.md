@@ -74,6 +74,17 @@ make validate_cudla_int8 USE_DLA_STANDALONE_MODE=1
 # or make validate_cudla_fp16 USE_DLA_STANDALONE_MODE=1
 ```
 
+Run the sample with cuDLA standalone mode with deterministic semaphore, this is for run the sample on some old DriveOS(we test 6.0.6.0) and Jetpack.
+```
+# "make clean" is needed when switch between hybrid mode and standalone mode
+make clean
+# Run INT8 inference on single image
+make run USE_DLA_STANDALONE_MODE=1 USE_DETERMINISTIC_SEMAPHORE=1
+# Or run COCO validation
+make validate_cudla_int8 USE_DLA_STANDALONE_MODE=1 USE_DETERMINISTIC_SEMAPHORE=1
+# or make validate_cudla_fp16 USE_DLA_STANDALONE_MODE=1 USE_DETERMINISTIC_SEMAPHORE=1
+```
+
 # mAP over COCO 2017
 
 |YOLOv5s |Official Data|DLA FP16|DLA INT8 QAT|GPU INT8 QAT|
