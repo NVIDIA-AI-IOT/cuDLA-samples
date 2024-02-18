@@ -1,5 +1,3 @@
-# SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: MIT
 #
 # SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: MIT
@@ -22,14 +20,6 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 #
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-# DEALINGS IN THE SOFTWARE.
-
 """Parsing the ONNX model and retrieving the scaling factors."""
 
 import logging
@@ -335,6 +325,8 @@ class QATModelParser:
             dequantize_node = node.o()
             quant_scales = QATModelParser.extract_qdq_scales(quantize_node, dequantize_node)
             dequantize_output = dequantize_node.outputs[0]
+            if(np.isin(dequantize_output, graph.outputs)):
+                precision_config[dequantize_output.name] = float(quant_scales)
             # Find all nodes whose inputs has dequantize_output.
             # It seems to be a bug, dequantize_node.outputs[0].outputs only return one nodes.
             for node in graph.nodes:
@@ -469,6 +461,7 @@ class QATModelParser:
            in order to successfully build a TensorRT engine.
         """
         def check_descendants(
+                graph: gs.Graph,
                 node: Node,
                 pattern: List = ["DequantizeLinear", "Reshape", "Transpose", "Conv"]) -> bool:
             """ Check if node's descendants follow a specific 'pattern'.
@@ -483,7 +476,7 @@ class QATModelParser:
             """
             node_out = [node.o()]
             for i, p in enumerate(pattern):
-                if node_out[i].op == p:
+                if node_out[i].op == p and not np.isin(node_out[i].outputs[0], graph.outputs):
                     node_out.append(node_out[i].o())
                 else:
                     return False, node_out[0], None
@@ -516,7 +509,7 @@ class QATModelParser:
         # 2. Remove Reshape->Transpose layers between DQ and Conv layers
         pattern = ["DequantizeLinear", "Reshape", "Transpose", "Conv"]
         for (i, node) in enumerate(quant_nodes):
-            has_pattern, node_out, node_conv_input = check_descendants(node, pattern)
+            has_pattern, node_out, node_conv_input = check_descendants(graph, node, pattern)
 
             if has_pattern:
                 # A. Transpose QuantizeLinear weights and output variable (3x3x960x1 -> 960x1x3x3)
